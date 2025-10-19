@@ -1,236 +1,309 @@
 # Product Requirements Document (PRD) - HealthyMealsAI
 
 ## 1. Product Overview
-HealthyMealsAI is an MVP web application that helps users adapt culinary recipes to their personal nutritional needs and dietary requirements. The app enables users to create and manage text-based recipes, define dietary preferences and macro targets, and generate AI-assisted adaptations that align recipes with individual goals. The system keeps version history with restore, enforces clear operational limits for reliability, and instruments key product analytics to measure success.
+HealthyMeal is an MVP web application that enables users to create, manage, and adapt text-based recipes to their personal dietary needs using AI. The core value is helping users remove allergens or disliked ingredients and adjust macronutrients (calories and protein) in existing recipes with minimal friction.
 
-Primary users include athletes and users with dietary constraints who need quick, reliable ways to tailor recipes to their preferences and macro goals.
+MVP scope focuses on:
+- Storing user-created recipes only (no imports, media, or sharing)
+- Simple user accounts to associate recipes and preferences
+- A user profile for allergens and disliked ingredients
+- AI-based adaptation of recipes according to one selected goal at a time
 
-Key capabilities in MVP:
-- Recipe CRUD for text-only recipes
-- User profile with dietary preferences and macro/calorie targets
-- AI adaptation against a single goal per run, with explanation and diff
-- Versioning of AI-adapted recipes with restore
-- Authentication via Supabase email/password
-- Analytics instrumentation for core funnel and weekly KPI
-
-Out of scope for MVP:
-- Importing recipes from a URL
-- Rich media (photos, videos)
-- Sharing or social features
-
+Key assumptions and constraints:
+- Recipe content is stored as a single multiline recipe_text field.
+- Data model includes: title (string), servings (number), per-serving macros (kcal, protein, carbs, fat as non-negative numbers), and recipe_text (up to 10,000 chars).
+- Profile stores allergens and disliked ingredients (no per-recipe overrides).
+- AI provider is OpenRouter; exact model and parameters are to be determined.
+- Adaptation runs support exactly one goal per run: remove allergens, remove disliked ingredients, reduce calories, or increase protein.
+- Adaptation outputs must conform to a strict JSON schema: { recipe_text, macros: { kcal, protein, carbs, fat }, explanation }.
+- Daily quota: maximum 10 successful adaptations per user per calendar day, reset at user-local midnight; failed attempts do not decrement quota.
 
 ## 2. User Problem
-Adapting online recipes to specific dietary needs is time-consuming and error-prone. Users must manually reconcile allergens/dislikes, macro targets, and calorie constraints—often resulting in compromises or repeated trial-and-error. HealthyMealsAI streamlines this process by capturing user preferences and macro goals, then using AI to produce feasible adaptations that are as close as possible to targets, with transparent explanations and versioning for easy compare/restore.
-
-Pain points addressed:
-- Difficulty removing allergens/disliked ingredients while maintaining palatability
-- Effortful macro alignment (calories, protein, carbs, fat)
-- Uncertainty about differences vs. the original recipe and why changes were made
-- Lack of simple history/restore for iterative experimentation
-- No central place to store personal recipes and preferences
-
+Users often discover appealing recipes online but struggle to align them with personal nutrition goals and dietary restrictions. Manually adapting recipes to remove allergens or disliked ingredients and to adjust calories or protein is time-consuming and error-prone. Users also want simple tracking of per-serving macros without complex tooling. HealthyMeal addresses these problems by providing an easy way to store personal recipes, capture dietary preferences, and use AI to propose safe, goal-aligned adaptations that users can review and accept.
 
 ## 3. Functional Requirements
+3.1 Authentication and Authorization
+- Users can create accounts, sign in, and sign out.
+- Users can only access and modify their own recipes and profile data.
+- Sessions must expire or be revocable; re-authentication required afterwards.
 
-3.1 Authentication and Access Control
-- Users can sign up, log in, and log out using Supabase email/password.
-- Protected routes: recipe management, adaptation, and preferences require authentication.
-- Sessions persist securely; unauthorized users are redirected to sign in.
+3.2 User Profile and Preferences
+- Users can view and update allergens and disliked ingredients in a profile settings page.
+- System prompt/guardrails for AI must prohibit introducing listed allergens/dislikes.
+- The application should capture and store user timezone for quota resets and analytics.
 
-3.2 User Preferences and Targets
-- Users can save allergens, intolerances, disliked ingredients, preferred cuisines, and macro/calorie targets.
-- Allergen/dislike lists use keyword/synonym matching; conflicts are hard-blocked on save and on AI proposals.
-- Macro/calorie targets are treated as range goals (±10%).
+3.3 Recipe Management (CRUD)
+- Create, read, update, and delete text-based recipes with fields: title, servings, per-serving macros (kcal, protein, carbs, fat), and recipe_text.
+- Field validation: non-empty title, servings as positive integer, macros as non-negative numbers, recipe_text length up to 10,000 characters.
+- Deletion requires a confirmation step.
+- List and detail views must be available; show an empty state when no recipes exist.
 
-3.3 Recipe Management (Text-only)
-- Users can create, read, update, and delete recipes.
-- Required fields: title, servings, ingredients_text, steps_text, per-serving macros (kcal, protein, carbs, fat).
-- Operational caps: up to 30 ingredients, 20 steps, and 2,000 characters per step.
-- Basic validation for required fields and limits.
+3.4 AI Adaptation Flow
+- An Adapt with AI button opens a modal allowing exactly one selected goal per run: remove allergens, remove disliked ingredients, reduce calories, or increase protein.
+- Modal includes an optional notes field with a character limit (500–1,000, final value configurable; default 500) and a live counter.
+- On submission, show a loading state; prevent duplicate submissions.
+- The system sends the recipe, profile preferences, selected goal, and optional notes to OpenRouter.
+- The AI response must match the strict JSON schema: { recipe_text, macros: { kcal, protein, carbs, fat }, explanation }.
+- On success, show the proposed recipe_text and proposed macros, along with the explanation. Also show a collapsible Original recipe panel.
+- Users can manually override proposed macros before saving; validate for non-negative numbers.
+- Acceptance requires a confirmation dialog; acceptance overwrites the existing recipe (no versioning or rollback).
+- Declining or closing the modal leaves the recipe unchanged.
 
-3.4 AI Adaptation
-- Users select exactly one goal per adaptation run from: reduce calories, increase protein, adjust macro ratio, remove allergens/dislikes.
-- The system enforces a limit of 10 AI adaptations per user per day.
-- AI returns: proposed adapted recipe, explanation of changes, and a before/after diff with macro deltas.
-- If targets cannot be fully met, the system returns the closest feasible adaptation with a clear delta summary and prompts to accept or revise the goal.
-- Timeout at 30 seconds with friendly error copy and exponential backoff (system-level) on retries.
+3.5 Quotas and Limits
+- Enforce a maximum of 10 successful adaptations per user per calendar day.
+- Display remaining adaptations in the UI; disable the Adapt with AI action when exhausted and show an explanatory tooltip.
+- Reset quota at user-local midnight; store timestamps in UTC along with user timezone.
+- Recipe_text limited to 10,000 characters; notes limited to the configured character cap (default 500). Block submissions over limits.
 
-3.5 Versioning
-- Accepted adaptations create a new version record auto-named as: v{n} · {goal} · {timestamp}.
-- Show the latest 5 versions per recipe; users can restore any prior version.
-- Restoration does not delete other versions.
+3.6 Errors and Latency Handling
+- Latency is not a constraint for MVP; show a clear loading indicator while waiting.
+- On AI error/timeout/invalid JSON response, show retry guidance; failed attempts do not decrement quota.
+- If saving the accepted adaptation fails, show an error and do not overwrite the recipe.
 
-3.6 Validation and Blocks
-- Per-serving macros are required and validated for basic formatting and plausibility.
-- Allergen/dislike conflicts are hard-blocked both when saving a recipe and when proposing/accepting AI adaptations.
-- When validation or blocks occur, show actionable error messages.
+3.7 Safety and Disclaimers
+- The AI system prompt must instruct never to introduce allergens/dislikes.
+- Show a persistent not medical advice/verify ingredients notice in the adaptation modal and a small footer notice on results.
+- No automated allergen double-checking in the MVP; warnings only.
 
-3.7 Analytics and KPI
-- Instrument events: sign_up, prefs_completed, recipe_created, ai_suggested, ai_accepted, recipe_saved.
-- Store analytics in Supabase with a weekly KPI view/dashboard.
-- Weekly “recipe generated” metric: ai_accepted OR recipe_created within 7 days.
-
-3.8 Non-Functional Requirements (MVP)
-- Reliability: enforce operational caps and adaptation/day quota.
-- Performance: adaptation timeout at 30 seconds.
-- Usability: clear explanations, diffs, and restore affordances.
-- Security: rely on Supabase auth; protected routes; do not expose secrets in client.
-- Accessibility/responsiveness: baseline web standards; details to be refined later.
-
+3.8 Analytics and Instrumentation
+- Emit events with UTC timestamps and user timezone metadata: profile_updated, recipe_created, ai_requested, ai_succeeded, ai_accepted.
+- Analytics stack details to be finalized; events should be queued or logged in a way that can be wired to the chosen provider later.
 
 ## 4. Product Boundaries
-- Not included in MVP: URL import, rich media, sharing, social features.
-- Email verification, password complexity policy, and advanced rate limiting are deferred.
-- Advanced analytics dashboards and alerts are limited to a simple weekly KPI view.
-- Internationalization, extensive accessibility specs, and complex cuisine taxonomies are out of scope for MVP.
+In scope (MVP):
+- User accounts, personal profiles for allergens/dislikes, personal recipes only
+- Text-only recipes; CRUD operations
+- Single-goal AI adaptation per run with strict JSON output and acceptance overwrite
+- Quotas, input limits, safety guardrails, and disclaimers
 
+Out of scope (MVP):
+- Importing recipes from URLs
+- Rich media (photos, videos)
+- Sharing recipes or social features
+- Versioning or rollback of adaptations
+- Automated allergen validation of AI output
+- Detailed analytics dashboards and finalized analytics provider configuration
+
+Dependencies and open items:
+- Select OpenRouter model and parameters; define fallback strategy
+- Finalize prompt templates, PII redaction, logging, and data-retention policy
+- Decide final notes cap (500 vs 1,000 char) and any AI output length limits
+- Specify error handling copy and retry/backoff policy details
+- Confirm authentication/authorization specifics (MVP-level access controls)
 
 ## 5. User Stories
-
-US-001 Sign up with email/password
-Description: As an unauthenticated user, I can create an account with email and password.
+US-001
+Title: User signs up
+Description: As a new user, I want to create an account so that I can save my recipes and preferences.
 Acceptance Criteria:
-- Given I am on the sign-up page, when I enter a valid email and password and submit, then my account is created in Supabase and I am authenticated.
-- Given invalid input (malformed email, empty password), when I submit, then I see inline validation errors and no account is created.
-- Given account creation succeeds, then an analytics event sign_up is recorded.
+- Given I am on the sign-up page, when I provide valid required fields, then my account is created and I am signed in.
+- When required fields are invalid, then I see validation errors and sign-up is blocked.
 
-US-002 Log in with email/password
-Description: As a registered user, I can authenticate using my credentials.
+US-002
+Title: User signs in
+Description: As a returning user, I want to sign in so that I can access my recipes and preferences.
 Acceptance Criteria:
-- Given valid credentials, when I submit the login form, then I am authenticated and redirected to my recipes list.
-- Given invalid credentials, when I submit, then I see an error and remain unauthenticated.
+- Given I have an account, when I provide valid credentials, then I am signed in and redirected to my recipes.
+- When credentials are invalid, then I see an error and remain signed out.
 
-US-003 Log out
-Description: As an authenticated user, I can log out and end my session.
+US-003
+Title: User signs out
+Description: As a signed-in user, I want to sign out so that others cannot access my account on this device.
 Acceptance Criteria:
-- Given I am authenticated, when I click log out, then my session ends and I am redirected to the sign-in page.
+- When I click sign out, then my session ends and I am redirected to the public landing page.
 
-US-004 Protected routes require auth
-Description: As an unauthenticated user, I cannot access recipe CRUD, adaptation, or preferences pages.
+US-004
+Title: Access control for recipes
+Description: As a user, I want to ensure that only I can view or modify my recipes.
 Acceptance Criteria:
-- Given I am unauthenticated, when I navigate to a protected route, then I am redirected to sign in.
+- Given I am signed in, when I request any recipe, then only my own recipes are accessible; others return 404/forbidden.
 
-US-005 Create or update dietary preferences
-Description: As an authenticated user, I can create and update my allergens, dislikes, cuisines, and macro/calorie targets.
+US-005
+Title: Session expiration
+Description: As a user, I want inactive sessions to expire so that access is secure.
 Acceptance Criteria:
-- Given I enter allergens/dislikes/cuisines and macro targets, when I save, then my preferences are persisted to my profile.
-- Given missing or invalid fields (e.g., negative macros), when I save, then I see inline errors and nothing is saved.
-- Given I save a complete profile, then an analytics event prefs_completed is recorded once per user.
+- Given my session expires, when I return, then I am prompted to sign in again before accessing my recipes.
 
-US-006 Allergen/dislike matching and hard-block
-Description: As a user, I am prevented from saving or accepting recipes that conflict with my allergens/dislikes.
+US-010
+Title: View profile
+Description: As a user, I want to view my profile so that I can see my allergens and dislikes.
 Acceptance Criteria:
-- Given my preferences include allergens or dislikes (with synonyms), when I attempt to save or accept an adaptation that includes a blocked ingredient, then I see a hard-block error and the action does not complete.
+- When I open profile settings, then my saved allergens and disliked ingredients are displayed along with my timezone.
 
-US-007 Create a recipe (text-only)
-Description: As an authenticated user, I can create a recipe with required fields and limits.
+US-011
+Title: Update allergens
+Description: As a user, I want to update my list of allergens so that AI avoids them.
 Acceptance Criteria:
-- Given I provide title, servings, ingredients_text, steps_text, and per-serving macros, when I save, then the recipe is created and visible in my list.
-- Given any required field is missing or exceeds limits (30 ingredients, 20 steps, 2,000 chars/step), when I save, then I see validation errors and the recipe is not created.
-- Given creation succeeds, then an analytics event recipe_created is recorded.
+- When I add or remove allergens and save, then the profile persists and an event profile_updated is emitted.
 
-US-008 View my recipes
-Description: As an authenticated user, I can view a list of my recipes and open details.
+US-012
+Title: Update disliked ingredients
+Description: As a user, I want to update disliked ingredients so that AI avoids them.
 Acceptance Criteria:
-- Given I am authenticated, when I navigate to my recipes, then I see my recipes sorted by most recent first.
-- Given I select a recipe, then I can see details including current version and latest 5 versions (if any).
+- When I add or remove disliked ingredients and save, then the profile persists and an event profile_updated is emitted.
 
-US-009 Edit a recipe
-Description: As an authenticated user, I can update a recipe’s text fields and macros.
+US-013
+Title: Profile completion prompt
+Description: As a user, I want a prompt to complete my profile so that AI adaptations can respect my preferences.
 Acceptance Criteria:
-- Given I open a recipe I own, when I edit fields within limits and save, then the recipe updates successfully.
-- Given I exceed limits or remove required fields, when I save, then I see validation errors and no changes persist.
+- When my allergens/dislikes are empty, then I see a non-blocking prompt encouraging completion.
 
-US-010 Delete a recipe
-Description: As an authenticated user, I can delete a recipe I own.
+US-020
+Title: Create recipe
+Description: As a user, I want to create a recipe so that I can store it for later.
 Acceptance Criteria:
-- Given I confirm deletion, when I delete, then the recipe is removed from my list and is no longer accessible.
+- Given required fields are valid (title, servings, macros non-negative, recipe_text <= 10,000), when I save, then the recipe is created and recipe_created is emitted.
+- When inputs are invalid or over limits, then I see errors and cannot save.
 
-US-011 Start AI adaptation (select one goal)
-Description: As a user, I can initiate an AI adaptation by selecting exactly one goal.
+US-021
+Title: List recipes with empty state
+Description: As a user, I want to see a list of my recipes or an empty state if none exist.
 Acceptance Criteria:
-- Given I open a recipe, when I choose a single goal (reduce calories, increase protein, adjust macro ratio, remove allergens/dislikes) and submit, then a request is sent to generate a proposal.
-- Given I select more than one goal, when I submit, then I am prompted to choose exactly one.
+- When I have no recipes, then I see an empty-state message and a create button.
+- When I have recipes, then I see a list with titles and key details.
 
-US-012 Enforce daily adaptation quota
-Description: As a user, I am limited to 10 AI adaptations per day.
+US-022
+Title: View recipe detail
+Description: As a user, I want to view a recipe’s full text and macros.
 Acceptance Criteria:
-- Given I have remaining quota, when I start an adaptation, then it proceeds.
-- Given I reached 10 adaptations today, when I start an adaptation, then I see a friendly quota-exceeded message and no new adaptation is generated.
+- When I open a recipe, then I can read recipe_text and see per-serving macros and servings.
 
-US-013 Handle adaptation timeout and retry
-Description: As a user, I receive friendly feedback if an adaptation exceeds 30 seconds.
+US-023
+Title: Edit recipe
+Description: As a user, I want to edit a recipe so that I can correct or update details.
 Acceptance Criteria:
-- Given an adaptation exceeds 30 seconds, when I wait, then I see a timeout message and suggestion to retry.
-- System-level exponential backoff is applied on retries without duplicating user-visible requests.
+- When I change fields and save valid data, then the updates persist.
+- Invalid changes or over-limit text are blocked with clear messages.
 
-US-014 Show adaptation proposal with explanation and diff
-Description: As a user, I can review the proposed adapted recipe with explanation and before/after diff.
+US-024
+Title: Delete recipe with confirmation
+Description: As a user, I want to delete a recipe only after confirming to avoid accidental loss.
 Acceptance Criteria:
-- Given the AI returns a proposal, when I open the result, then I see the adapted recipe, explanation of changes, and before/after differences including macro deltas.
-- Given the goal cannot be fully met, when I view the proposal, then I see the closest feasible version and a clear delta summary to targets.
+- When I click delete, then I see a confirmation; confirming deletes the recipe; canceling aborts.
 
-US-015 Accept adaptation and create new version
-Description: As a user, I can accept an adaptation to save a new version.
+US-025
+Title: Validate recipe fields
+Description: As a user, I want the app to validate fields so that data remains consistent.
 Acceptance Criteria:
-- Given I accept a proposal, when I confirm, then a new version is saved with auto-name v{n} · {goal} · {timestamp} and becomes the current version.
-- Given acceptance succeeds, then analytics events ai_accepted and recipe_saved are recorded.
+- Servings must be a positive integer; macros must be non-negative numbers; title must be non-empty; recipe_text must be <= 10,000 chars.
 
-US-016 Reject adaptation
-Description: As a user, I can reject an adaptation proposal and keep the current recipe unchanged.
+US-030
+Title: Open Adapt with AI modal
+Description: As a user, I want to open an adaptation modal so that I can choose one goal.
 Acceptance Criteria:
-- Given a proposal is displayed, when I reject it, then no new version is created and I remain on the current version.
+- When I click Adapt with AI, then a modal opens with the four goals and an optional notes field with a live counter.
 
-US-017 View version history and restore
-Description: As a user, I can view the latest 5 versions and restore any prior version.
+US-031
+Title: Select goal and add notes
+Description: As a user, I want to select one goal and optionally add notes to guide the AI.
 Acceptance Criteria:
-- Given a recipe has versions, when I open version history, then I see the latest 5 with auto-names.
-- Given I select restore, when I confirm, then the chosen version becomes current without deleting other versions.
+- Exactly one goal can be selected; notes cannot exceed the configured cap (default 500); submit is disabled when over the limit.
 
-US-018 Prevent allergen/dislike conflicts in proposals
-Description: As a user, I do not receive proposals that include blocked ingredients.
+US-032
+Title: Submit adaptation request
+Description: As a user, I want to submit the adaptation and see progress.
 Acceptance Criteria:
-- Given my preferences, when the system prepares a proposal, then conflicting ingredients are not included; otherwise the proposal is hard-blocked with an error.
+- When I submit, then I see a loading indicator and the submit action is disabled until a response or error.
+- Event ai_requested is emitted once per submission attempt.
 
-US-019 Validate per-serving macros on recipe save
-Description: As a user, I must provide plausible per-serving macros to save a recipe.
+US-033
+Title: Daily quota display and enforcement
+Description: As a user, I want to see and respect my remaining daily adaptations.
 Acceptance Criteria:
-- Given macros are missing or non-numeric/negative, when I save, then I see validation errors and the recipe is not saved.
-- Given macros are present and valid, when I save, then the recipe is saved.
+- Remaining adaptations are displayed; when 0, the Adapt with AI action is disabled with a tooltip.
+- Quota decrements only on successful AI responses (ai_succeeded), resets at user-local midnight.
 
-US-020 Analytics instrumentation
-Description: As a product team, I can track core events and compute weekly KPI.
+US-034
+Title: Handle successful AI response
+Description: As a user, I want to review the AI’s proposed recipe and macros before saving.
 Acceptance Criteria:
-- Given user actions occur (sign_up, prefs_completed, recipe_created, ai_suggested, ai_accepted, recipe_saved), when they happen, then corresponding events are persisted in Supabase analytics.
-- Given a weekly view, when I query the KPI view, then I can compute “weekly recipe generated” = ai_accepted OR recipe_created within 7 days per user.
+- The modal shows proposed recipe_text, proposed macros, and explanation; the Original recipe panel is collapsible.
+- Event ai_succeeded is emitted when a valid JSON response is received.
 
-US-021 Unauthorized access redirect
-Description: As an unauthenticated user, I am redirected from protected endpoints.
+US-035
+Title: Manually override proposed macros
+Description: As a user, I want to adjust macros before saving.
 Acceptance Criteria:
-- Given I try to access preferences, recipe CRUD, or adaptation pages without a session, when I navigate, then I am redirected to sign-in.
+- I can edit macros; validation enforces non-negative numbers; invalid entries block saving with messages.
 
-US-022 Basic security controls
-Description: As a user, my data is accessible only through authenticated sessions.
+US-036
+Title: Accept adaptation with overwrite confirmation
+Description: As a user, I want to confirm acceptance and overwrite my recipe.
 Acceptance Criteria:
-- Given I am authenticated, when I use protected routes, then my session is validated by Supabase.
-- Given I am not authenticated, when I call protected APIs, then I receive an unauthorized response and no data is returned.
+- When I click Accept, then a confirmation dialog appears; confirming overwrites the recipe; event ai_accepted is emitted; canceling closes the dialog without changes.
 
-US-023 Operational caps enforcement on edit/update
-Description: As a user, I cannot exceed ingredient/step limits when editing.
+US-037
+Title: Decline or cancel adaptation
+Description: As a user, I want to exit without changes if I am not satisfied.
 Acceptance Criteria:
-- Given I exceed 30 ingredients, 20 steps, or 2,000 chars per step, when I save edits, then I see validation errors and the update is blocked.
+- Closing the modal or selecting decline leaves the recipe unchanged and does not decrement quota.
 
-US-024 Single-goal enforcement for adaptation
-Description: As a user, I must choose only one goal per adaptation.
+US-038
+Title: Handle errors and timeouts
+Description: As a user, I want clear guidance on errors and the ability to retry.
 Acceptance Criteria:
-- Given multiple goals are selected, when I submit, then I am prompted to choose exactly one before proceeding.
+- On AI error/timeout/invalid schema, then I see an error state with retry guidance; failed attempts do not decrement quota.
 
+US-039
+Title: Validate AI response schema
+Description: As a system, I must accept only valid AI JSON responses.
+Acceptance Criteria:
+- Responses not matching { recipe_text, macros: { kcal, protein, carbs, fat }, explanation } are rejected with an error message and logged; no quota decrement.
+
+US-040
+Title: Enforce recipe text length limit
+Description: As a user, I want a visible counter and blocking at 10,000 characters.
+Acceptance Criteria:
+- Live counter shows remaining characters; when over 10,000, save/submit is disabled and an error is displayed.
+
+US-041
+Title: Enforce notes length limit
+Description: As a user, I want a visible counter and blocking at the configured cap.
+Acceptance Criteria:
+- Live counter shows remaining characters; when over the cap (default 500), submit is disabled and an error is displayed.
+
+US-050
+Title: Emit analytics events
+Description: As a product team, we want key events emitted for measurement.
+Acceptance Criteria:
+- Events profile_updated, recipe_created, ai_requested, ai_succeeded, ai_accepted are emitted with UTC timestamp and user timezone; failures are logged.
+
+US-060
+Title: Display safety disclaimers
+Description: As a user, I want safety notices so that I understand limitations.
+Acceptance Criteria:
+- The adaptation modal shows a persistent notice; the results view includes a footer notice.
+
+US-061
+Title: Prevent duplicate submissions
+Description: As a user, I want the app to prevent accidental duplicate adaptation requests.
+Acceptance Criteria:
+- While a request is in-flight, the submit button is disabled and duplicate requests are ignored.
+
+US-062
+Title: Overwrite without versioning
+Description: As a user, I understand that acceptance overwrites the recipe and cannot be undone.
+Acceptance Criteria:
+- After accepting, the previous version is not retained; no rollback or history is available.
+
+US-063
+Title: Timezone handling for quota reset
+Description: As a user, I want quota reset at my local midnight.
+Acceptance Criteria:
+- The system stores my timezone and resets daily quota at my local midnight; timestamps are stored in UTC with timezone metadata.
 
 ## 6. Success Metrics
-- Preferences completion rate: target 90% of signed-up users complete dietary preferences (prefs_completed / sign_up).
-- Weekly recipe generation: target 75% of users generate ≥1 recipe/week, measured by ai_accepted OR recipe_created within a 7-day window per user.
-- AI adaptation acceptance rate: percentage of adaptation proposals accepted (ai_accepted / ai_suggested).
-- Reliability indicators (operational limits): proportion of requests within caps and under 30s timeout.
-- Data captured via Supabase analytics events and aggregated in a weekly KPI view/dashboard.
+Primary success criteria:
+- Profile completion: 90% of users have filled allergens/dislikes in their profile.
+- Adaptation engagement: 75% of users generate one or more recipes per week or perform at least one adaptation per week (select one KPI for MVP and track both if possible).
 
+Additional KPIs:
+- Acceptance rate: Percentage of AI proposals that are accepted.
+- Time-to-first-adaptation: Median time from first recipe creation to first adaptation.
+- Daily quota utilization: Distribution of adaptations per user per day; percentage hitting the limit.
+- Error rate: Percentage of adaptation attempts resulting in timeout/invalid schema/error.
+- Data collection coverage: Percentage of sessions with all key events captured with timezone metadata.
 
+Measurement notes:
+- Instrument events with UTC timestamps and user timezone.
+- Build lightweight dashboards or export logs to analyze KPIs post-MVP depending on chosen analytics stack.
