@@ -1,6 +1,9 @@
 1. List of tables with their columns, data types, and constraints
 
 ### Table: auth.users (Supabase managed)
+
+THIS TABLE IS MANAGED BY SUPABASE AUTH.
+
 - id UUID PRIMARY KEY (managed by Supabase Auth)
 - email, encrypted password, and other auth-specific metadata (managed outside this schema)
 
