@@ -141,6 +141,10 @@ export const RecipeCreateDtoSchema = z.object({
 
 export type RecipeCreateDto = z.infer<typeof RecipeCreateDtoSchema>;
 
+export const RecipeUpdateDtoSchema = RecipeCreateDtoSchema.partial();
+
+export type RecipeUpdateDto = z.infer<typeof RecipeUpdateDtoSchema>;
+
 export interface RecipeDTO {
   id: RecipeRow["id"];
   title: RecipeRow["title"];

@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "../../db/supabase.client";
-import type { Tables } from "../../db/database.types";
+import type { Tables, TablesUpdate } from "../../db/database.types";
 import type {
   GetRecipesQuery,
   RecipeCreateCommand,
   RecipeDTO,
   RecipeListResponseDTO,
+  RecipeUpdateCommand,
 } from "../../types";
 import type { TablesInsert } from "../../db/database.types";
 
@@ -13,7 +14,8 @@ type RecipeRow = Tables<"recipes">;
 type RecipeServiceErrorCode =
   | "fetch_failed"
   | "count_failed"
-  | "insert_failed";
+  | "insert_failed"
+  | "update_failed";
 
 interface RecipeServiceErrorOptions {
   message: string;
@@ -234,5 +236,112 @@ export const getRecipeById = async (
   }
 
   return mapRecipeRowToDTO(data);
+};
+
+export interface UpdateRecipeOptions {
+  returnMode: "full" | "minimal";
+}
+
+interface UpdateRecipeResultBase {
+  id: RecipeRow["id"];
+  updatedAt: RecipeRow["updated_at"];
+}
+
+type UpdateRecipeResult =
+  | (UpdateRecipeResultBase & { returnMode: "minimal" })
+  | (UpdateRecipeResultBase & { returnMode: "full"; recipe: RecipeDTO });
+
+const buildUpdatePayload = (command: RecipeUpdateCommand) => {
+  const payload: Partial<TablesUpdate<"recipes">> = {};
+
+  if (command.title !== undefined) {
+    payload.title = command.title;
+  }
+
+  if (command.servings !== undefined) {
+    payload.servings = command.servings;
+  }
+
+  if (command.recipeText !== undefined) {
+    payload.recipe_text = command.recipeText;
+  }
+
+  if (command.lastAdaptationExplanation !== undefined) {
+    payload.last_adaptation_explanation = command.lastAdaptationExplanation ?? null;
+  }
+
+  if (command.macros) {
+    payload.kcal = command.macros.kcal;
+    payload.protein = command.macros.protein;
+    payload.carbs = command.macros.carbs;
+    payload.fat = command.macros.fat;
+  }
+
+  return payload;
+};
+
+export const updateRecipe = async (
+  supabase: SupabaseClient,
+  id: string,
+  userId: string,
+  command: RecipeUpdateCommand,
+  options: UpdateRecipeOptions,
+): Promise<UpdateRecipeResult | null> => {
+  const payload = buildUpdatePayload(command);
+
+  if (Object.keys(payload).length === 0) {
+    throw new RecipeServiceError({
+      message: "No fields provided for update",
+      code: "update_failed",
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("recipes")
+    .update({
+      ...payload,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to update recipe", {
+      userId,
+      id,
+      command,
+      error,
+    });
+
+    throw new RecipeServiceError({
+      message: "Unable to update recipe",
+      code: "update_failed",
+      cause: error,
+    });
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const base: UpdateRecipeResultBase = {
+    id: data.id,
+    updatedAt: data.updated_at,
+  };
+
+  if (options.returnMode === "minimal") {
+    return {
+      ...base,
+      returnMode: "minimal",
+    } satisfies UpdateRecipeResult;
+  }
+
+  return {
+    ...base,
+    returnMode: "full",
+    recipe: mapRecipeRowToDTO(data),
+  } satisfies UpdateRecipeResult;
 };
 
