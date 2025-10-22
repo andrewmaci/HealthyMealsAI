@@ -15,7 +15,8 @@ type RecipeServiceErrorCode =
   | "fetch_failed"
   | "count_failed"
   | "insert_failed"
-  | "update_failed";
+  | "update_failed"
+  | "delete_failed";
 
 interface RecipeServiceErrorOptions {
   message: string;
@@ -343,5 +344,29 @@ export const updateRecipe = async (
     returnMode: "full",
     recipe: mapRecipeRowToDTO(data),
   } satisfies UpdateRecipeResult;
+};
+
+export const deleteRecipe = async (supabase: SupabaseClient, id: string, userId: string): Promise<boolean> => {
+  const { error, count } = await supabase
+    .from("recipes")
+    .delete({ count: "exact" })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Failed to delete recipe", {
+      userId,
+      id,
+      error,
+    });
+
+    throw new RecipeServiceError({
+      message: "Unable to delete recipe",
+      code: "delete_failed",
+      cause: error,
+    });
+  }
+
+  return (count ?? 0) > 0;
 };
 

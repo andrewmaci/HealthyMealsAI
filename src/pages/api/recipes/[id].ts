@@ -3,8 +3,13 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 import { DEFAULT_USER_ID } from "../../../db/supabase.client";
-import { getRecipeById, RecipeServiceError, updateRecipe } from "../../../lib/services/recipe.service";
-import type { RecipeUpdateCommand, RecipeUpdateMinimalDTO, RecipeUpdateResponseDTO } from "../../../types";
+import { deleteRecipe, getRecipeById, RecipeServiceError, updateRecipe } from "../../../lib/services/recipe.service";
+import type {
+  RecipeDeleteCommand,
+  RecipeUpdateCommand,
+  RecipeUpdateMinimalDTO,
+  RecipeUpdateResponseDTO,
+} from "../../../types";
 import { RecipeUpdateDtoSchema } from "../../../types";
 
 export const prerender = false;
@@ -21,6 +26,113 @@ const RecipeIdSchema = z.string().uuid({ message: "Invalid recipe ID." });
 const UpdateRecipeReturnSchema = z
   .enum(["minimal", "full"] as const)
   .default("full");
+
+const DeleteRecipeQuerySchema = z.object({
+  confirm: z.coerce.boolean().optional(),
+});
+
+const DeleteRecipeBodySchema = z
+  .object({
+    confirmation: z.boolean().optional(),
+  })
+  .strict();
+
+const getDeleteRequestCommand = async (request: Request): Promise<RecipeDeleteCommand> => {
+  const contentLength = request.headers.get("content-length");
+
+  if (contentLength === null || Number(contentLength) === 0) {
+    return {};
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch (error) {
+    console.error("Failed to parse DELETE /api/recipes/:id body", { error });
+
+    throw buildJsonResponse({ error: "Invalid JSON body." }, 400);
+  }
+
+  const result = DeleteRecipeBodySchema.safeParse(body);
+
+  if (!result.success) {
+    throw result.error;
+  }
+
+  return result.data;
+};
+
+export const DELETE: APIRoute = async ({ params, request, url, locals }) => {
+  const user = locals.session?.user;
+  const userId = user?.id ?? DEFAULT_USER_ID;
+
+  const idResult = RecipeIdSchema.safeParse(params.id);
+
+  if (!idResult.success) {
+    return buildValidationErrorResponse(idResult.error);
+  }
+
+  const confirmParam = url.searchParams.get("confirm") ?? undefined;
+  const queryResult = DeleteRecipeQuerySchema.safeParse({ confirm: confirmParam });
+
+  if (!queryResult.success) {
+    return buildValidationErrorResponse(queryResult.error);
+  }
+
+  let command: RecipeDeleteCommand;
+
+  try {
+    command = await getDeleteRequestCommand(request);
+  } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
+
+    if (error instanceof z.ZodError) {
+      return buildValidationErrorResponse(error);
+    }
+
+    console.error("Unexpected error while parsing delete request body", { error });
+
+    return buildJsonResponse({ error: "Invalid request body." }, 400);
+  }
+
+  const isConfirmed = queryResult.data.confirm === true || command.confirmation === true;
+  const confirmationProvided = queryResult.data.confirm !== undefined || command.confirmation !== undefined;
+
+  if (confirmationProvided && !isConfirmed) {
+    return buildJsonResponse({ error: "Deletion requires confirmation." }, 400);
+  }
+
+  try {
+    const deleted = await deleteRecipe(locals.supabase, idResult.data, userId);
+
+    if (!deleted) {
+      return buildJsonResponse({ error: "Recipe not found." }, 404);
+    }
+
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    if (error instanceof RecipeServiceError) {
+      console.error("Recipe service error while deleting recipe", {
+        userId,
+        id: idResult.data,
+        error,
+      });
+
+      return buildJsonResponse({ error: error.message }, 500);
+    }
+
+    console.error("Unexpected error while deleting recipe", {
+      userId,
+      id: idResult.data,
+      error,
+    });
+
+    return buildJsonResponse({ error: "Failed to delete recipe" }, 500);
+  }
+};
 
 const buildValidationErrorResponse = (error: z.ZodError) =>
   buildJsonResponse(
