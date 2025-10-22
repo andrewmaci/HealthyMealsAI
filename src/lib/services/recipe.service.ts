@@ -203,3 +203,36 @@ export const getRecipes = async (
   };
 };
 
+export const getRecipeById = async (
+  supabase: SupabaseClient,
+  id: string,
+  userId: string,
+): Promise<RecipeDTO | null> => {
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to retrieve recipe", {
+      userId,
+      id,
+      error,
+    });
+
+    throw new RecipeServiceError({
+      message: "Unable to fetch recipe",
+      code: "fetch_failed",
+      cause: error,
+    });
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return mapRecipeRowToDTO(data);
+};
+
