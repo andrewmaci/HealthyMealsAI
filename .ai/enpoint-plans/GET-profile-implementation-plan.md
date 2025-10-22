@@ -47,5 +47,4 @@ Supabase-authenticated request → Astro API route (`src/pages/api/profile.ts`) 
 4. Ensure service normalizes `timezone` to `UTC` fallback when null.
 5. Implement `src/pages/api/profile.ts` GET handler: set `export const prerender = false`, validate session, call service, map to DTO, return `Response.json` with 200 status.
 6. Handle Supabase errors with try/catch, log via shared logger or `console.error`, and respond with 500.
-7. Add unit tests (if testing framework available) for service logic using Supabase client mocks; add integration test for route if infrastructure exists.
 8. Update any API documentation or Postman collections to include `/api/profile` endpoint details.
