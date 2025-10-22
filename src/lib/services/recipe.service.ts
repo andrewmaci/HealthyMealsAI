@@ -1,12 +1,19 @@
 import type { SupabaseClient } from "../../db/supabase.client";
 import type { Tables } from "../../db/database.types";
-import type { GetRecipesQuery, RecipeDTO, RecipeListResponseDTO } from "../../types";
+import type {
+  GetRecipesQuery,
+  RecipeCreateCommand,
+  RecipeDTO,
+  RecipeListResponseDTO,
+} from "../../types";
+import type { TablesInsert } from "../../db/database.types";
 
 type RecipeRow = Tables<"recipes">;
 
 type RecipeServiceErrorCode =
   | "fetch_failed"
-  | "count_failed";
+  | "count_failed"
+  | "insert_failed";
 
 interface RecipeServiceErrorOptions {
   message: string;
@@ -42,6 +49,46 @@ const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
+
+export const createRecipe = async (
+  supabase: SupabaseClient,
+  userId: string,
+  command: RecipeCreateCommand,
+): Promise<RecipeDTO> => {
+  const insertPayload = {
+    title: command.title,
+    servings: command.servings,
+    kcal: command.macros.kcal,
+    protein: command.macros.protein,
+    carbs: command.macros.carbs,
+    fat: command.macros.fat,
+    recipe_text: command.recipeText,
+    last_adaptation_explanation: command.lastAdaptationExplanation ?? null,
+    user_id: userId,
+  } satisfies TablesInsert<"recipes">;
+
+  const { data, error } = await supabase
+    .from("recipes")
+    .insert(insertPayload)
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error("Failed to insert recipe", {
+      userId,
+      command,
+      error,
+    });
+
+    throw new RecipeServiceError({
+      message: "Unable to create recipe",
+      code: "insert_failed",
+      cause: error,
+    });
+  }
+
+  return mapRecipeRowToDTO(data);
+};
 
 const mapSortColumn = (column: GetRecipesQuery["sortBy"]): keyof RecipeRow => {
   switch (column) {

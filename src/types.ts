@@ -77,6 +77,70 @@ export interface ProfileUpdateCommand {
 
 export type RecipeMacroDTO = Pick<RecipeRow, "kcal" | "protein" | "carbs" | "fat">;
 
+const MACRO_SCALE = 100;
+
+export const MacroPrecisionErrorMessage = "Macro values cannot have more than two decimal places.";
+
+const hasAtMostTwoDecimalPlaces = (value: number) => Number.isInteger(Math.round(value * MACRO_SCALE));
+
+const RecipeMacroInputSchema = z
+  .object({
+    kcal: z
+      .number({ required_error: "Total calories (kcal) are required." })
+      .min(0, "kcal cannot be negative."),
+    protein: z
+      .number({ required_error: "Protein grams are required." })
+      .min(0, "protein cannot be negative."),
+    carbs: z
+      .number({ required_error: "Carbohydrate grams are required." })
+      .min(0, "carbs cannot be negative."),
+    fat: z
+      .number({ required_error: "Fat grams are required." })
+      .min(0, "fat cannot be negative."),
+  })
+  .superRefine((macros, ctx) => {
+    (Object.entries(macros) as Array<[keyof typeof macros, number]>).forEach(([key, value]) => {
+      if (!hasAtMostTwoDecimalPlaces(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: MacroPrecisionErrorMessage,
+        });
+      }
+    });
+  });
+
+export const RecipeCreateDtoSchema = z.object({
+  title: z
+    .string({ required_error: "Title is required." })
+    .trim()
+    .min(1, "Title cannot be empty.")
+    .max(200, "Title cannot exceed 200 characters."),
+  servings: z
+    .number({ required_error: "Servings are required." })
+    .int("Servings must be a whole number.")
+    .min(1, "Servings must be at least 1.")
+    .max(50, "Servings cannot exceed 50."),
+  macros: RecipeMacroInputSchema,
+  recipeText: z
+    .string({ required_error: "Recipe instructions are required." })
+    .trim()
+    .min(1, "Recipe instructions cannot be empty.")
+    .max(10000, "Recipe instructions cannot exceed 10,000 characters."),
+  lastAdaptationExplanation: z
+    .union([
+      z
+        .string()
+        .trim()
+        .min(1, "Adaptation explanation cannot be empty when provided.")
+        .max(2000, "Adaptation explanation cannot exceed 2,000 characters."),
+      z.literal(null),
+    ])
+    .optional(),
+});
+
+export type RecipeCreateDto = z.infer<typeof RecipeCreateDtoSchema>;
+
 export interface RecipeDTO {
   id: RecipeRow["id"];
   title: RecipeRow["title"];
