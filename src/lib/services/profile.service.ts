@@ -1,13 +1,13 @@
 import type { SupabaseClient } from "../../db/supabase.client";
-import type { Tables, TablesInsert } from "../../db/database.types";
-import type { ProfileDTO } from "../../types";
+import type { Tables, TablesInsert, TablesUpdate } from "../../db/database.types";
+import type { ProfileDTO, ProfileUpdateDto } from "../../types";
 
 type ProfileRow = Tables<"profiles">;
 type ProfileInsertRow = TablesInsert<"profiles">;
 
 interface ProfileServiceErrorOptions {
   message: string;
-  code: "fetch_failed" | "insert_failed" | "provision_failed";
+  code: "fetch_failed" | "insert_failed" | "provision_failed" | "update_failed" | "precondition_failed";
   cause?: unknown;
 }
 
@@ -22,6 +22,13 @@ export class ProfileServiceError extends Error {
       // Maintain original stack when supported by the runtime.
       this.cause = options.cause;
     }
+  }
+}
+
+export class ProfileConflictError extends Error {
+  public constructor(message = "Profile update conflict detected.") {
+    super(message);
+    this.name = "ProfileConflictError";
   }
 }
 
@@ -79,5 +86,101 @@ export const getOrCreateProfile = async (supabase: SupabaseClient, userId: strin
   }
 
   return insertedProfile;
+};
+
+const mapDtoToUpdatePayload = (data: ProfileUpdateDto): TablesUpdate<"profiles"> => ({
+  allergens: data.allergens,
+  disliked_ingredients: data.dislikedIngredients,
+  timezone: data.timezone ?? null,
+});
+
+const ensureValidConcurrencyHeader = (ifUnmodifiedSince: string) => {
+  if (!ifUnmodifiedSince) {
+    throw new ProfileServiceError({
+      message: "Missing 'If-Unmodified-Since' header.",
+      code: "precondition_failed",
+    });
+  }
+
+  const parsedDate = new Date(ifUnmodifiedSince);
+  if (Number.isNaN(parsedDate.valueOf())) {
+    throw new ProfileServiceError({
+      message: "Invalid 'If-Unmodified-Since' header value.",
+      code: "precondition_failed",
+    });
+  }
+
+  return {
+    parsedDate,
+    isoString: parsedDate.toISOString(),
+    rfc1123String: parsedDate.toUTCString(),
+  } as const;
+};
+
+export const updateProfile = async (
+  supabase: SupabaseClient,
+  userId: string,
+  data: ProfileUpdateDto,
+  ifUnmodifiedSince: string,
+): Promise<ProfileDTO> => {
+  const headerMetadata = ensureValidConcurrencyHeader(ifUnmodifiedSince);
+
+  const { data: currentProfile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("Failed to fetch profile before update", {
+      userId,
+      error: fetchError,
+    });
+    throw new ProfileServiceError({
+      message: "Unable to retrieve profile for update",
+      code: "fetch_failed",
+      cause: fetchError,
+    });
+  }
+
+  if (!currentProfile) {
+    console.error("Profile not found before update", { userId });
+    throw new ProfileServiceError({
+      message: "Profile not found",
+      code: "fetch_failed",
+    });
+  }
+
+  const currentUpdatedAtUtc = new Date(currentProfile.updated_at).toUTCString();
+
+  if (currentUpdatedAtUtc !== headerMetadata.rfc1123String) {
+    throw new ProfileConflictError();
+  }
+
+  const { error: updateError, data: updatedRow } = await supabase
+    .from("profiles")
+    .update(mapDtoToUpdatePayload(data))
+    .eq("id", userId)
+    .eq("updated_at", headerMetadata.isoString)
+    .select("*")
+    .maybeSingle();
+
+  if (updateError) {
+    console.error("Failed to update profile", {
+      userId,
+      error: updateError,
+    });
+    throw new ProfileServiceError({
+      message: "Unable to update profile",
+      code: "update_failed",
+      cause: updateError,
+    });
+  }
+
+  if (!updatedRow) {
+    throw new ProfileConflictError();
+  }
+
+  return mapProfileRowToDTO(updatedRow);
 };
 

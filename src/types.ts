@@ -33,6 +33,41 @@ export interface ProfileDTO {
 
 export type ProfileResponseDTO = StandardResponse<ProfileDTO>;
 
+const isValidTimezone = (timezone: string) => {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const createPreferenceArraySchema = (fieldLabel: string) =>
+  z
+    .array(
+      z
+        .string({ required_error: `${fieldLabel} entry is required.` })
+        .transform((value) => value.trim())
+        .refine((value) => value.length > 0, {
+          message: `${fieldLabel} strings cannot be empty.`,
+        }),
+    )
+    .max(50, `${fieldLabel} list cannot exceed 50 entries.`);
+
+export const ProfileUpdateDtoSchema = z.object({
+  allergens: createPreferenceArraySchema("Allergen"),
+  dislikedIngredients: createPreferenceArraySchema("Ingredient"),
+  timezone: z
+    .string()
+    .transform((value) => value.trim())
+    .refine(isValidTimezone, {
+      message: "Invalid timezone identifier.",
+    })
+    .nullable(),
+});
+
+export type ProfileUpdateDto = z.infer<typeof ProfileUpdateDtoSchema>;
+
 export interface ProfileUpdateCommand {
   allergens?: ProfileUpdateRow["allergens"];
   dislikedIngredients?: ProfileUpdateRow["disliked_ingredients"];
