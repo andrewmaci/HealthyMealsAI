@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Tables, TablesInsert, TablesUpdate } from "./db/database.types";
 
 type ProfileRow = Tables<"profiles">;
@@ -183,3 +184,55 @@ export interface HealthStatusDTO {
 }
 
 export type HealthStatusResponseDTO = StandardResponse<HealthStatusDTO>;
+
+const coerceOptionalNumber = (schema: z.ZodNumber) =>
+  z.preprocess((value) => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (typeof value === "string" && value.trim().length === 0) {
+      return undefined;
+    }
+
+    return value;
+  }, schema.optional());
+
+const RecipeSortableColumns = ["created_at", "updated_at", "title"] as const;
+const SortOrders = ["asc", "desc"] as const;
+
+export const GetRecipesQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).catch(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(50).catch(10).default(10),
+    search: z
+      .string()
+      .trim()
+      .transform((value) => (value.length === 0 ? undefined : value))
+      .optional(),
+    sortBy: z.enum(RecipeSortableColumns).catch("updated_at").default("updated_at"),
+    sortOrder: z.enum(SortOrders).catch("desc").default("desc"),
+    minKcal: coerceOptionalNumber(z.coerce.number().min(0)),
+    maxKcal: coerceOptionalNumber(z.coerce.number().min(0)),
+    minProtein: coerceOptionalNumber(z.coerce.number().min(0)),
+    maxProtein: coerceOptionalNumber(z.coerce.number().min(0)),
+  })
+  .superRefine((data, ctx) => {
+    if (data.minKcal !== undefined && data.maxKcal !== undefined && data.minKcal > data.maxKcal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["minKcal"],
+        message: "minKcal cannot be greater than maxKcal.",
+      });
+    }
+
+    if (data.minProtein !== undefined && data.maxProtein !== undefined && data.minProtein > data.maxProtein) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["minProtein"],
+        message: "minProtein cannot be greater than maxProtein.",
+      });
+    }
+  });
+
+export type GetRecipesQuery = z.infer<typeof GetRecipesQuerySchema>;
