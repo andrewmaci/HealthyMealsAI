@@ -304,3 +304,64 @@ export const GetRecipesQuerySchema = z
   });
 
 export type GetRecipesQuery = z.infer<typeof GetRecipesQuerySchema>;
+
+const optionalIsoDateString = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+
+    if (trimmed.length === 0) {
+      return undefined;
+    }
+
+    return trimmed;
+  },
+  z
+    .string()
+    .datetime({ offset: true })
+    .optional(),
+);
+
+export const GetRecipeAdaptationHistoryQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).catch(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(50).catch(10).default(10),
+    start: optionalIsoDateString,
+    end: optionalIsoDateString,
+    sortOrder: z.enum(SortOrders).catch("desc").default("desc"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.start !== undefined && data.end !== undefined) {
+      const startDate = Date.parse(data.start);
+      const endDate = Date.parse(data.end);
+
+      if (Number.isNaN(startDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["start"],
+          message: "start must be a valid ISO 8601 date.",
+        });
+      }
+
+      if (Number.isNaN(endDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["end"],
+          message: "end must be a valid ISO 8601 date.",
+        });
+      }
+
+      if (!Number.isNaN(startDate) && !Number.isNaN(endDate) && startDate > endDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["start"],
+          message: "start must be earlier than or equal to end.",
+        });
+      }
+    }
+  });
+
+export type GetRecipeAdaptationHistoryQuery = z.infer<typeof GetRecipeAdaptationHistoryQuerySchema>;
