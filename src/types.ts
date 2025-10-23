@@ -199,6 +199,32 @@ export interface RecipeAdaptationRequestCommand {
   notes?: string;
 }
 
+export const RecipeAdaptationRequestDtoSchema = z.object({
+  goal: z
+    .enum([
+      "remove_allergens",
+      "remove_disliked_ingredients",
+      "reduce_calories",
+      "increase_protein",
+    ])
+    .describe("Primary objective for the requested adaptation."),
+  notes: z
+    .string({ invalid_type_error: "Notes must be a string." })
+    .trim()
+    .max(500, "Notes cannot exceed 500 characters.")
+    .transform((value) => (value.length === 0 ? undefined : value))
+    .optional()
+    .describe("Optional notes supplied by the user."),
+});
+
+export type RecipeAdaptationRequestDto = z.infer<typeof RecipeAdaptationRequestDtoSchema>;
+
+export interface AdaptationPendingDTO {
+  status: "pending";
+}
+
+export type AdaptationPendingResponseDTO = StandardResponse<AdaptationPendingDTO>;
+
 export interface AdaptationQuotaDTO {
   limit: number;
   used: number;

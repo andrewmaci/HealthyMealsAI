@@ -3,15 +3,12 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
-import {
-  AdaptationServiceError,
-  acceptAdaptation,
-  getAdaptationHistory,
-} from "../../../../../lib/services/adaptation.service";
+import { AdaptationServiceError, getAdaptationHistory, proposeAdaptation } from "../../../../../lib/services/adaptation.service";
 import {
   GetRecipeAdaptationHistoryQuerySchema,
-  RecipeAdaptationAcceptDtoSchema,
+  RecipeAdaptationRequestDtoSchema,
 } from "../../../../../types";
+import type { RecipeAdaptationRequestDto } from "../../../../../types";
 
 export const prerender = false;
 
@@ -82,7 +79,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
   try {
     body = await request.json();
   } catch (error) {
-    console.warn("Failed to parse adaptation acceptance body", {
+    console.warn("Failed to parse adaptation request body", {
       userId,
       recipeId: recipeIdResult.data,
       error,
@@ -91,43 +88,63 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     return buildJsonResponse({ error: "Invalid JSON body." }, 400);
   }
 
-  const parsedBody = RecipeAdaptationAcceptDtoSchema.safeParse(body);
+  const parsedBody = RecipeAdaptationRequestDtoSchema.safeParse(body);
 
   if (!parsedBody.success) {
-    return buildJsonResponse({ error: "Invalid request body." }, 400);
+    return buildJsonResponse(
+      {
+        error: "Invalid request body.",
+        details: parsedBody.error.flatten(),
+      },
+      400,
+    );
   }
 
-  try {
-    const recipe = await acceptAdaptation(locals.supabase, userId, recipeIdResult.data, parsedBody.data);
+  const command: RecipeAdaptationRequestDto = parsedBody.data;
+  const idempotencyKey = request.headers.get("idempotency-key") ?? undefined;
 
-    return buildJsonResponse({ data: recipe }, 200);
+  try {
+    const result = await proposeAdaptation(locals.supabase, userId, recipeIdResult.data, command, {
+      idempotencyKey,
+    });
+
+    if (result.status === "pending") {
+      return buildJsonResponse(result.response, 202);
+    }
+
+    return buildJsonResponse({ data: result.proposal }, 200);
   } catch (error) {
     if (error instanceof AdaptationServiceError) {
       switch (error.code) {
         case "recipe_not_found":
-        case "proposal_not_found":
-          return buildJsonResponse({ error: "Adaptation proposal not found." }, 404);
-        case "accept_failed":
-          return buildJsonResponse({ error: "Failed to accept adaptation." }, 500);
+          return buildJsonResponse({ error: "Recipe not found." }, 404);
+        case "quota_exceeded":
+          return buildJsonResponse({ error: "Daily adaptation quota exceeded." }, 403);
+        case "adaptation_in_progress":
+          return buildJsonResponse({ error: "An adaptation is already in progress for this recipe." }, 409);
+        case "invalid_idempotency_key":
+          return buildJsonResponse({ error: error.message }, 400);
+        case "proposal_generation_failed":
+          return buildJsonResponse({ error: "Failed to generate adaptation proposal." }, 500);
         default:
-          console.error("Adaptation service error during accept", {
+          console.error("Adaptation service error during proposal", {
             userId,
             recipeId: recipeIdResult.data,
             code: error.code,
             error,
           });
 
-          return buildJsonResponse({ error: "Failed to accept adaptation." }, 500);
+          return buildJsonResponse({ error: "Failed to process adaptation request." }, 500);
       }
     }
 
-    console.error("Unexpected error while accepting adaptation", {
+    console.error("Unexpected error while proposing adaptation", {
       userId,
       recipeId: recipeIdResult.data,
       error,
     });
 
-    return buildJsonResponse({ error: "Failed to accept adaptation." }, 500);
+    return buildJsonResponse({ error: "Failed to process adaptation request." }, 500);
   }
 };
 
