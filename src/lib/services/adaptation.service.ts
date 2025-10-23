@@ -23,6 +23,7 @@ import type { SupabaseClient } from "../../db/supabase.client";
 import type {
   AdaptationPendingResponseDTO,
   AdaptationQuotaDTO,
+  AdaptationQuotaResponseDTO,
   GetRecipeAdaptationHistoryQuery,
   RecipeAdaptationAcceptCommand,
   RecipeAdaptationHistoryItemDTO,
@@ -483,7 +484,7 @@ export const acceptAdaptation = async (
   return mapRecipeRowToDTO(recipeRow as RecipeRow);
 };
 
-const getProfilePreferences = async (
+export const getProfilePreferences = async (
   supabase: SupabaseClient,
   userId: string,
 ): Promise<{
@@ -594,6 +595,18 @@ const calculateQuota = async (
     windowEnd: window.end,
     timezone,
   } satisfies AdaptationQuotaUsage;
+};
+
+export const getAdaptationQuota = async (
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<AdaptationQuotaResponseDTO> => {
+  const profile = await getProfilePreferences(supabase, userId);
+  const quota = await calculateQuota(supabase, userId, profile.timezone);
+
+  return {
+    data: buildQuotaDto(quota.limit, quota.used, quota.windowStart, quota.windowEnd, quota.timezone),
+  } satisfies AdaptationQuotaResponseDTO;
 };
 
 const assertQuotaAvailable = (quota: AdaptationQuotaUsage) => {
