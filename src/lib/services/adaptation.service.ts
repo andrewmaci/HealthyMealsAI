@@ -1,11 +1,19 @@
+import type { Tables } from "../../db/database.types";
 import type { SupabaseClient } from "../../db/supabase.client";
 import type {
   GetRecipeAdaptationHistoryQuery,
+  RecipeAdaptationAcceptCommand,
   RecipeAdaptationHistoryItemDTO,
   RecipeAdaptationHistoryResponseDTO,
+  RecipeDTO,
 } from "../../types";
 
-type AdaptationServiceErrorCode = "recipe_not_found" | "history_fetch_failed" | "history_count_failed";
+type AdaptationServiceErrorCode =
+  | "recipe_not_found"
+  | "history_fetch_failed"
+  | "history_count_failed"
+  | "proposal_not_found"
+  | "accept_failed";
 
 interface AdaptationServiceErrorOptions {
   code: AdaptationServiceErrorCode;
@@ -154,5 +162,101 @@ export const getAdaptationHistory = async (
       totalPages,
     },
   } satisfies RecipeAdaptationHistoryResponseDTO;
+};
+
+type RecipeRow = Tables<"recipes">;
+
+const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
+  id: row.id,
+  title: row.title,
+  servings: row.servings,
+  macros: {
+    kcal: row.kcal,
+    protein: row.protein,
+    carbs: row.carbs,
+    fat: row.fat,
+  },
+  recipeText: row.recipe_text,
+  lastAdaptationExplanation: row.last_adaptation_explanation,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export const acceptAdaptation = async (
+  supabase: SupabaseClient,
+  userId: string,
+  recipeId: string,
+  command: RecipeAdaptationAcceptCommand,
+): Promise<RecipeDTO> => {
+  const { data: ownershipRow, error: ownershipError } = await supabase
+    .from("adaptation_logs")
+    .select("id, recipe_id, user_id, recipes!inner(id, user_id)")
+    .eq("id", command.logId)
+    .eq("recipe_id", recipeId)
+    .eq("user_id", userId)
+    .eq("recipes.user_id", userId)
+    .maybeSingle();
+
+  if (ownershipError) {
+    console.error("Failed to verify adaptation proposal ownership", {
+      userId,
+      recipeId,
+      command,
+      error: ownershipError,
+    });
+
+    throw new AdaptationServiceError({
+      code: "history_fetch_failed",
+      message: "Unable to verify adaptation proposal ownership.",
+      cause: ownershipError,
+    });
+  }
+
+  if (!ownershipRow || !ownershipRow.recipes || ownershipRow.recipes.user_id !== userId) {
+    console.warn("Adaptation proposal not found or unauthorized", {
+      userId,
+      recipeId,
+      command,
+      ownershipRow,
+    });
+
+    throw new AdaptationServiceError({
+      code: "proposal_not_found",
+      message: "Adaptation proposal not found.",
+    });
+  }
+
+  const { data: recipeRow, error: updateError } = await supabase
+    .from("recipes")
+    .update({
+      recipe_text: command.recipeText,
+      kcal: command.macros.kcal,
+      protein: command.macros.protein,
+      carbs: command.macros.carbs,
+      fat: command.macros.fat,
+      last_adaptation_explanation: command.explanation,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", recipeId)
+    .eq("user_id", userId)
+    .select("id, title, servings, kcal, protein, carbs, fat, recipe_text, last_adaptation_explanation, created_at, updated_at")
+    .maybeSingle();
+
+  if (updateError || !recipeRow) {
+    console.error("Failed to accept adaptation", {
+      userId,
+      recipeId,
+      command,
+      error: updateError,
+    });
+
+    throw new AdaptationServiceError({
+      code: "accept_failed",
+      message: "Unable to accept adaptation.",
+      cause: updateError,
+    });
+  }
+
+  return mapRecipeRowToDTO(recipeRow as RecipeRow);
 };
 

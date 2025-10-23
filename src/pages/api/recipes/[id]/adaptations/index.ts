@@ -3,8 +3,15 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 
 import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
-import { AdaptationServiceError, getAdaptationHistory } from "../../../../../lib/services/adaptation.service";
-import { GetRecipeAdaptationHistoryQuerySchema } from "../../../../../types";
+import {
+  AdaptationServiceError,
+  acceptAdaptation,
+  getAdaptationHistory,
+} from "../../../../../lib/services/adaptation.service";
+import {
+  GetRecipeAdaptationHistoryQuerySchema,
+  RecipeAdaptationAcceptDtoSchema,
+} from "../../../../../types";
 
 export const prerender = false;
 
@@ -59,6 +66,68 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
     });
 
     return buildJsonResponse({ error: "Failed to fetch adaptation history." }, 500);
+  }
+};
+
+export const POST: APIRoute = async ({ params, locals, request }) => {
+  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
+  const recipeIdResult = RecipeIdSchema.safeParse(params.id);
+
+  if (!recipeIdResult.success) {
+    return buildJsonResponse({ error: "Invalid recipe id." }, 400);
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch (error) {
+    console.warn("Failed to parse adaptation acceptance body", {
+      userId,
+      recipeId: recipeIdResult.data,
+      error,
+    });
+
+    return buildJsonResponse({ error: "Invalid JSON body." }, 400);
+  }
+
+  const parsedBody = RecipeAdaptationAcceptDtoSchema.safeParse(body);
+
+  if (!parsedBody.success) {
+    return buildJsonResponse({ error: "Invalid request body." }, 400);
+  }
+
+  try {
+    const recipe = await acceptAdaptation(locals.supabase, userId, recipeIdResult.data, parsedBody.data);
+
+    return buildJsonResponse({ data: recipe }, 200);
+  } catch (error) {
+    if (error instanceof AdaptationServiceError) {
+      switch (error.code) {
+        case "recipe_not_found":
+        case "proposal_not_found":
+          return buildJsonResponse({ error: "Adaptation proposal not found." }, 404);
+        case "accept_failed":
+          return buildJsonResponse({ error: "Failed to accept adaptation." }, 500);
+        default:
+          console.error("Adaptation service error during accept", {
+            userId,
+            recipeId: recipeIdResult.data,
+            code: error.code,
+            error,
+          });
+
+          return buildJsonResponse({ error: "Failed to accept adaptation." }, 500);
+      }
+    }
+
+    console.error("Unexpected error while accepting adaptation", {
+      userId,
+      recipeId: recipeIdResult.data,
+      error,
+    });
+
+    return buildJsonResponse({ error: "Failed to accept adaptation." }, 500);
   }
 };
 

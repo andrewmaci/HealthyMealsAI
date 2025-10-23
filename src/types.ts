@@ -236,6 +236,22 @@ export interface RecipeAdaptationAcceptCommand {
   explanation: NonNullable<RecipeRow["last_adaptation_explanation"]>;
 }
 
+export const RecipeAdaptationAcceptDtoSchema = z.object({
+  logId: z
+    .string({ required_error: "logId is required." })
+    .trim()
+    .uuid({ message: "logId must be a valid UUID." }),
+  recipeText: RecipeCreateDtoSchema.shape.recipeText,
+  macros: RecipeMacroInputSchema,
+  explanation: z
+    .string({ required_error: "Adaptation explanation is required." })
+    .trim()
+    .min(1, "Adaptation explanation cannot be empty.")
+    .max(2000, "Adaptation explanation cannot exceed 2,000 characters."),
+});
+
+export type RecipeAdaptationAcceptDto = z.infer<typeof RecipeAdaptationAcceptDtoSchema>;
+
 export interface RecipeAdaptationHistoryItemDTO {
   id: AdaptationLogRow["id"];
   recipeId: AdaptationLogRow["recipe_id"];
