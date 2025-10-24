@@ -161,7 +161,7 @@ export const updateProfile = async (
     .from("profiles")
     .update(mapDtoToUpdatePayload(data))
     .eq("id", userId)
-    .eq("updated_at", headerMetadata.isoString)
+    .eq("updated_at", currentProfile.updated_at)
     .select("*")
     .maybeSingle();
 

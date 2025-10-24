@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 
-import { AdaptationServiceError, getAdaptationQuota } from "../../lib/services/adaptation.service";
+import { AdaptationServiceError, getAdaptationQuota } from "../../../lib/services/adaptation.service";
 
 export const prerender = false;
 

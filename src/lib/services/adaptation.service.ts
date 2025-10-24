@@ -1,3 +1,18 @@
+import type { Tables, TablesInsert } from "../../db/database.types";
+import type { SupabaseClient } from "../../db/supabase.client";
+import type {
+  AdaptationPendingResponseDTO,
+  AdaptationQuotaDTO,
+  AdaptationQuotaResponseDTO,
+  GetRecipeAdaptationHistoryQuery,
+  RecipeAdaptationAcceptCommand,
+  RecipeAdaptationHistoryItemDTO,
+  RecipeAdaptationHistoryResponseDTO,
+  RecipeAdaptationProposalDTO,
+  RecipeAdaptationRequestCommand,
+  RecipeDTO,
+} from "../../types";
+
 interface AdaptationQuotaUsage {
   limit: number;
   used: number;
@@ -18,20 +33,6 @@ interface AdaptationPendingResult {
 }
 
 type ProposeAdaptationResult = AdaptationProposalResult | AdaptationPendingResult;
-import type { Tables, TablesInsert } from "../../db/database.types";
-import type { SupabaseClient } from "../../db/supabase.client";
-import type {
-  AdaptationPendingResponseDTO,
-  AdaptationQuotaDTO,
-  AdaptationQuotaResponseDTO,
-  GetRecipeAdaptationHistoryQuery,
-  RecipeAdaptationAcceptCommand,
-  RecipeAdaptationHistoryItemDTO,
-  RecipeAdaptationHistoryResponseDTO,
-  RecipeAdaptationProposalDTO,
-  RecipeAdaptationRequestCommand,
-  RecipeDTO,
-} from "../../types";
 
 type AdaptationServiceErrorCode =
   | "recipe_not_found"
@@ -412,41 +413,71 @@ export const acceptAdaptation = async (
   recipeId: string,
   command: RecipeAdaptationAcceptCommand,
 ): Promise<RecipeDTO> => {
-  const { data: ownershipRow, error: ownershipError } = await supabase
+  const { data: logEntry, error: logError } = await supabase
     .from("adaptation_logs")
-    .select("id, recipe_id, user_id, recipes!inner(id, user_id)")
+    .select("id, recipe_id, user_id")
     .eq("id", command.logId)
     .eq("recipe_id", recipeId)
     .eq("user_id", userId)
-    .eq("recipes.user_id", userId)
     .maybeSingle();
 
-  if (ownershipError) {
-    console.error("Failed to verify adaptation proposal ownership", {
+  if (logError) {
+    console.error("Failed to fetch adaptation log for acceptance", {
       userId,
       recipeId,
       command,
-      error: ownershipError,
+      error: logError,
     });
-
     throw new AdaptationServiceError({
       code: "history_fetch_failed",
-      message: "Unable to verify adaptation proposal ownership.",
-      cause: ownershipError,
+      message: "Unable to fetch adaptation log.",
+      cause: logError,
     });
   }
 
-  if (!ownershipRow || !ownershipRow.recipes || ownershipRow.recipes.user_id !== userId) {
-    console.warn("Adaptation proposal not found or unauthorized", {
+  if (!logEntry) {
+    console.warn("Adaptation log not found for acceptance", {
       userId,
       recipeId,
       command,
-      ownershipRow,
     });
-
     throw new AdaptationServiceError({
       code: "proposal_not_found",
       message: "Adaptation proposal not found.",
+    });
+  }
+
+  // Verify recipe ownership separately
+  const { data: recipeEntry, error: recipeError } = await supabase
+    .from("recipes")
+    .select("id, user_id")
+    .eq("id", recipeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (recipeError) {
+    console.error("Failed to verify recipe ownership for acceptance", {
+      userId,
+      recipeId,
+      command,
+      error: recipeError,
+    });
+    throw new AdaptationServiceError({
+      code: "history_fetch_failed",
+      message: "Unable to verify recipe ownership.",
+      cause: recipeError,
+    });
+  }
+
+  if (!recipeEntry) {
+    console.warn("Recipe not found or unauthorized for acceptance", {
+      userId,
+      recipeId,
+      command,
+    });
+    throw new AdaptationServiceError({
+      code: "recipe_not_found",
+      message: "Recipe not found.",
     });
   }
 
@@ -568,8 +599,7 @@ const calculateQuota = async (
     .select("id", { head: true, count: "exact" })
     .eq("user_id", userId)
     .gte("created_at", window.start)
-    .lt("created_at", window.end)
-    .maybeSingle();
+    .lt("created_at", window.end);
 
   if (error) {
     console.error("Failed to compute adaptation quota", {
