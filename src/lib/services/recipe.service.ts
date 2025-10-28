@@ -145,16 +145,17 @@ export const getRecipes = async (
   const rangeStart = (query.page - 1) * query.pageSize;
   const rangeEnd = rangeStart + query.pageSize - 1;
 
-  const baseBuilder = supabase.from("recipes");
-
   const countPromise = applyFilters(
-    baseBuilder.select("id", { count: "exact", head: true }),
+    supabase
+      .from("recipes")
+      .select("id", { count: "exact", head: true }),
     query,
     userId,
-  ).maybeSingle();
+  );
 
   const dataPromise = applyFilters(
-    baseBuilder
+    supabase
+      .from("recipes")
       .select("*")
       .order(sortColumn, { ascending: isAscending })
       .range(rangeStart, rangeEnd),

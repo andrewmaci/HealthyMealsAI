@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 
+import { DEFAULT_USER_ID } from "../../db/supabase.client";
 import { GetRecipesQuerySchema, RecipeCreateDtoSchema } from "../../types";
 import { createRecipe, getRecipes, RecipeServiceError } from "../../lib/services/recipe.service";
 
@@ -14,11 +15,7 @@ const buildJsonResponse = (body: unknown, status: number) =>
   });
 
 export const GET: APIRoute = async ({ locals, request }) => {
-  const user = locals.session?.user;
-
-  if (!user) {
-    return buildJsonResponse({ error: "Unauthorized" }, 401);
-  }
+  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
 
   const searchParams = Object.fromEntries(new URL(request.url).searchParams);
   const parseResult = GetRecipesQuerySchema.safeParse(searchParams);
@@ -33,26 +30,22 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const validatedQuery = parseResult.data;
 
   try {
-    const result = await getRecipes(locals.supabase, user.id, validatedQuery);
+    const result = await getRecipes(locals.supabase, userId, validatedQuery);
 
     return buildJsonResponse(result, 200);
   } catch (error) {
     if (error instanceof RecipeServiceError) {
-      console.error("Recipe service error", { userId: user.id, code: error.code, error });
+      console.error("Recipe service error", { userId, code: error.code, error });
       return buildJsonResponse({ error: error.message }, 500);
     }
 
-    console.error("Unexpected error while fetching recipes", { userId: user.id, error });
+    console.error("Unexpected error while fetching recipes", { userId, error });
     return buildJsonResponse({ error: "Failed to fetch recipes" }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ locals, request }) => {
-  const user = locals.session?.user;
-
-  if (!user) {
-    return buildJsonResponse({ error: "Unauthorized" }, 401);
-  }
+  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
 
   try {
     const payload = await request.json();
@@ -69,7 +62,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     const validatedPayload = parseResult.data;
-    const result = await createRecipe(locals.supabase, user.id, {
+    const result = await createRecipe(locals.supabase, userId, {
       title: validatedPayload.title,
       servings: validatedPayload.servings,
       macros: validatedPayload.macros,
@@ -80,7 +73,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return buildJsonResponse({ data: result }, 201);
   } catch (error) {
     if (error instanceof RecipeServiceError) {
-      console.error("Recipe service error during creation", { userId: user.id, code: error.code, error });
+      console.error("Recipe service error during creation", { userId, code: error.code, error });
 
       if (error.code === "insert_failed") {
         return buildJsonResponse({ error: error.message }, 422);
@@ -89,7 +82,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       return buildJsonResponse({ error: error.message }, 500);
     }
 
-    console.error("Unexpected error while creating recipe", { userId: user.id, error });
+    console.error("Unexpected error while creating recipe", { userId, error });
     return buildJsonResponse({ error: "Failed to create recipe" }, 500);
   }
 };
