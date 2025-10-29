@@ -1,0 +1,16 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import RecipeDetailPage from "../../components/recipes/detail/RecipeDetailPage";
+
+const { id } = Astro.params;
+
+if (!id) {
+  throw new Error("Recipe id param missing.");
+}
+---
+
+<Layout title="Recipe Details">
+  <RecipeDetailPage client:load id={id} />
+</Layout>
+
+
