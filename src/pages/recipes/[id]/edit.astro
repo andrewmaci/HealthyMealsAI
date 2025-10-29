@@ -1,0 +1,40 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import RecipeForm from "../../../components/recipes/form/RecipeForm";
+import type { RecipeDTO, RecipeResponseDTO } from "../../../types";
+
+const { id } = Astro.params;
+
+if (!id) {
+  throw new Error("Recipe id param missing.");
+}
+
+let initialRecipe: RecipeDTO | undefined;
+
+try {
+  const response = await fetch(`/api/recipes/${id}`);
+
+  if (response.ok) {
+    const payload = (await response.json()) as RecipeResponseDTO;
+    initialRecipe = payload.data;
+  } else if (response.status === 404) {
+    Astro.response.status = 404;
+  } else {
+    console.error("Failed to load recipe for edit page", {
+      id,
+      status: response.status,
+      statusText: response.statusText,
+    });
+  }
+} catch (error) {
+  console.error("Unexpected error while loading recipe for edit page", {
+    id,
+    error,
+  });
+}
+---
+
+<Layout title="Edit Recipe">
+  <RecipeForm client:load mode="edit" recipeId={id} initialRecipe={initialRecipe} />
+</Layout>
+

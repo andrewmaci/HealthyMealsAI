@@ -1,4 +1,4 @@
-type AnalyticsEvent = "ai_requested" | "ai_succeeded" | "ai_accepted";
+type AnalyticsEvent = "ai_requested" | "ai_succeeded" | "ai_accepted" | "recipe_created";
 
 interface AnalyticsPayload {
   event: AnalyticsEvent;
@@ -38,4 +38,8 @@ export const trackAiSucceeded = (timezone: string, metadata?: Record<string, unk
 
 export const trackAiAccepted = (timezone: string, metadata?: Record<string, unknown>) => {
   emitAnalyticsPayload(createPayload("ai_accepted", timezone, metadata));
+};
+
+export const trackRecipeCreated = (timezone: string, metadata?: Record<string, unknown>) => {
+  emitAnalyticsPayload(createPayload("recipe_created", timezone, metadata));
 };
