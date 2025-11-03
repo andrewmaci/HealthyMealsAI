@@ -41,7 +41,17 @@ export const mapProfileRowToDTO = (row: ProfileRow): ProfileDTO => ({
   updatedAt: row.updated_at,
 });
 
-export const getOrCreateProfile = async (supabase: SupabaseClient, userId: string): Promise<ProfileRow> => {
+interface ProfileProvisionDefaults {
+  timezone?: ProfileRow["timezone"];
+  allergens?: ProfileRow["allergens"];
+  dislikedIngredients?: ProfileRow["disliked_ingredients"];
+}
+
+export const getOrCreateProfile = async (
+  supabase: SupabaseClient,
+  userId: string,
+  defaults: ProfileProvisionDefaults = {},
+): Promise<ProfileRow> => {
   const { data: profile, error: fetchError } = await supabase
     .from("profiles")
     .select("*")
@@ -61,7 +71,12 @@ export const getOrCreateProfile = async (supabase: SupabaseClient, userId: strin
     return profile;
   }
 
-  const insertPayload: ProfileInsertRow = { id: userId };
+  const insertPayload: ProfileInsertRow = {
+    id: userId,
+    allergens: defaults.allergens ?? [],
+    disliked_ingredients: defaults.dislikedIngredients ?? [],
+    timezone: defaults.timezone ?? null,
+  };
   const { data: insertedProfile, error: insertError } = await supabase
     .from("profiles")
     .insert(insertPayload)

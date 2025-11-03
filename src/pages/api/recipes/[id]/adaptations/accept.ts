@@ -2,7 +2,6 @@ import type { APIRoute } from "astro";
 
 import { z } from "zod";
 
-import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
 import { AdaptationServiceError, acceptAdaptation } from "../../../../../lib/services/adaptation.service";
 import { RecipeAdaptationAcceptDtoSchema } from "../../../../../types";
 import type { RecipeAdaptationAcceptDto } from "../../../../../types";
@@ -20,7 +19,13 @@ const buildJsonResponse = (body: unknown, status: number) =>
 const RecipeIdSchema = z.string().uuid();
 
 export const POST: APIRoute = async ({ params, locals, request }) => {
-  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
   const recipeIdResult = RecipeIdSchema.safeParse(params.id);
 
   if (!recipeIdResult.success) {

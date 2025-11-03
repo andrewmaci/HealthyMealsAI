@@ -1,6 +1,12 @@
 ---
 import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
+
+const session = Astro.locals.session;
+
+if (session?.user?.id) {
+  return Astro.redirect("/recipes");
+}
 ---
 
 <Layout>

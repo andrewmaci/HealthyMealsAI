@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
 
-import { DEFAULT_USER_ID } from "../../db/supabase.client";
 import { GetRecipesQuerySchema, RecipeCreateDtoSchema } from "../../types";
 import { createRecipe, getRecipes, RecipeServiceError } from "../../lib/services/recipe.service";
 
@@ -15,7 +14,13 @@ const buildJsonResponse = (body: unknown, status: number) =>
   });
 
 export const GET: APIRoute = async ({ locals, request }) => {
-  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
 
   const searchParams = Object.fromEntries(new URL(request.url).searchParams);
   const parseResult = GetRecipesQuerySchema.safeParse(searchParams);
@@ -45,7 +50,13 @@ export const GET: APIRoute = async ({ locals, request }) => {
 };
 
 export const POST: APIRoute = async ({ locals, request }) => {
-  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
 
   try {
     const payload = await request.json();

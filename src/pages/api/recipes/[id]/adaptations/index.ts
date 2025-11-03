@@ -2,7 +2,6 @@ import type { APIRoute } from "astro";
 
 import { z } from "zod";
 
-import { DEFAULT_USER_ID } from "../../../../../db/supabase.client";
 import { AdaptationServiceError, getAdaptationHistory, proposeAdaptation } from "../../../../../lib/services/adaptation.service";
 import {
   GetRecipeAdaptationHistoryQuerySchema,
@@ -23,7 +22,13 @@ const buildJsonResponse = (body: unknown, status: number) =>
 const RecipeIdSchema = z.string().uuid();
 
 export const GET: APIRoute = async ({ params, url, locals }) => {
-  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
   const recipeIdResult = RecipeIdSchema.safeParse(params.id);
 
   if (!recipeIdResult.success) {
@@ -67,7 +72,13 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 };
 
 export const POST: APIRoute = async ({ params, locals, request }) => {
-  const userId = locals.session?.user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
   const recipeIdResult = RecipeIdSchema.safeParse(params.id);
 
   if (!recipeIdResult.success) {
@@ -160,7 +171,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
             stack: error.stack,
           });
 
-          return buildJsonResponse({ 
+          return buildJsonResponse({
             error: "Failed to process adaptation request.",
             details: error.message,
             errorCode: error.code,
@@ -177,10 +188,13 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
       error,
     });
 
-    return buildJsonResponse({ 
-      error: "Failed to process adaptation request.",
-      details: error instanceof Error ? error.message : "Unknown error",
-    }, 500);
+    return buildJsonResponse(
+      {
+        error: "Failed to process adaptation request.",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      500,
+    );
   }
 };
 

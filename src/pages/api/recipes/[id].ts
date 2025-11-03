@@ -2,7 +2,6 @@ import type { APIRoute } from "astro";
 
 import { z } from "zod";
 
-import { DEFAULT_USER_ID } from "../../../db/supabase.client";
 import { deleteRecipe, getRecipeById, RecipeServiceError, updateRecipe } from "../../../lib/services/recipe.service";
 import type {
   RecipeDeleteCommand,
@@ -64,8 +63,13 @@ const getDeleteRequestCommand = async (request: Request): Promise<RecipeDeleteCo
 };
 
 export const DELETE: APIRoute = async ({ params, request, url, locals }) => {
-  const user = locals.session?.user;
-  const userId = user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
 
   const idResult = RecipeIdSchema.safeParse(params.id);
 
@@ -144,9 +148,13 @@ const buildValidationErrorResponse = (error: z.ZodError) =>
   );
 
 export const GET: APIRoute = async ({ params, locals }) => {
-  const user = locals.session?.user;
+  const sessionUser = locals.session?.user;
 
-  const userId = user?.id ?? DEFAULT_USER_ID;
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
 
   const validationResult = RecipeIdSchema.safeParse(params.id);
 
@@ -182,8 +190,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
 };
 
 export const PUT: APIRoute = async ({ params, request, url, locals }) => {
-  const user = locals.session?.user;
-  const userId = user?.id ?? DEFAULT_USER_ID;
+  const sessionUser = locals.session?.user;
+
+  if (!sessionUser) {
+    return buildJsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const userId = sessionUser.id;
 
   const idResult = RecipeIdSchema.safeParse(params.id);
 
