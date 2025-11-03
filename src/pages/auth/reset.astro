@@ -1,0 +1,22 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
+
+export const prerender = false;
+
+const session = Astro.locals.session;
+
+if (session?.user?.id) {
+  return Astro.redirect("/recipes");
+}
+
+const searchParams = Astro.url.searchParams;
+const token = searchParams.get("token") ?? searchParams.get("token_hash");
+const redirectUrl = searchParams.get("redirect") ?? "/auth/signin";
+---
+
+<PublicLayout title="Reset Password | HealthyMealsAI">
+  <ResetPasswordForm client:load token={token} redirectUrl={redirectUrl} />
+</PublicLayout>
+
+

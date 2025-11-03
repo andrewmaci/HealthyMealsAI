@@ -1,0 +1,20 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { SignUpForm } from "@/components/auth/SignUpForm";
+
+export const prerender = false;
+
+const session = Astro.locals.session;
+
+if (session?.user?.id) {
+  return Astro.redirect("/recipes");
+}
+
+const redirectUrl = Astro.url.searchParams.get("redirect") ?? "/recipes";
+---
+
+<PublicLayout title="Create Account | HealthyMealsAI">
+  <SignUpForm client:load redirectUrl={redirectUrl} />
+</PublicLayout>
+
+

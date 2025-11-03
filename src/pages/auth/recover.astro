@@ -1,0 +1,18 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro";
+import { RecoverPasswordForm } from "@/components/auth/RecoverPasswordForm";
+
+export const prerender = false;
+
+const session = Astro.locals.session;
+
+if (session?.user?.id) {
+  return Astro.redirect("/recipes");
+}
+---
+
+<PublicLayout title="Recover Password | HealthyMealsAI">
+  <RecoverPasswordForm client:load />
+</PublicLayout>
+
+
