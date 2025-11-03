@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface HeaderBarProps {
+  recipeId: string;
   title: string;
   onDelete: () => Promise<void>;
   onRetry?: () => void;
@@ -10,7 +11,7 @@ interface HeaderBarProps {
   isLoading?: boolean;
 }
 
-const HeaderBar = ({ title, onDelete, onRetry, isDeleting = false, isLoading = false }: HeaderBarProps) => {
+const HeaderBar = ({ recipeId, title, onDelete, onRetry, isDeleting = false, isLoading = false }: HeaderBarProps) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocusedRef = useRef<Element | null>(null);
@@ -78,6 +79,15 @@ const HeaderBar = ({ title, onDelete, onRetry, isDeleting = false, isLoading = f
             {isLoading ? "Refreshing..." : "Refresh"}
           </Button>
         ) : null}
+        <Button
+          variant="outline"
+          onClick={() => {
+            window.location.href = `/recipes/${recipeId}/edit`;
+          }}
+          disabled={isDeleteDisabled}
+        >
+          Edit
+        </Button>
         <Button variant="destructive" onClick={handleOpenConfirm} disabled={isDeleteDisabled}>
           {isDeleteDisabled ? "Deleting..." : "Delete"}
         </Button>

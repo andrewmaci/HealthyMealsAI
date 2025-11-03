@@ -12,6 +12,14 @@ import type {
   RecipeAdaptationRequestCommand,
   RecipeDTO,
 } from "../../types";
+import {
+  buildSystemMessage,
+  buildUserMessage,
+  createStructuredChatCompletion,
+  OpenRouterServiceError,
+  type JsonSchema,
+  type ResponseFormat,
+} from "./openrouter.service";
 
 interface AdaptationQuotaUsage {
   limit: number;
@@ -70,7 +78,7 @@ export class AdaptationServiceError extends Error {
   }
 }
 
-const DAILY_ADAPTATION_LIMIT_FALLBACK = 3;
+const DAILY_ADAPTATION_LIMIT_FALLBACK = 20;
 const IDEMPOTENCY_KEY_MAX_LENGTH = 64;
 const ADAPTATION_DISCLAIMER =
   "This adaptation is AI-generated. Review carefully and consult a professional for personalized dietary guidance.";
@@ -191,36 +199,7 @@ const mapRecipeRowToDTO = (row: Tables<"recipes">): RecipeDTO => ({
 
 const roundToTwo = (value: number) => Math.round(value * 100) / 100;
 
-const adaptMacros = (
-  goal: RecipeAdaptationRequestCommand["goal"],
-  baseMacros: RecipeDTO["macros"],
-): RecipeDTO["macros"] => {
-  switch (goal) {
-    case "reduce_calories":
-      return {
-        kcal: roundToTwo(baseMacros.kcal * 0.9),
-        protein: roundToTwo(baseMacros.protein),
-        carbs: roundToTwo(baseMacros.carbs * 0.9),
-        fat: roundToTwo(baseMacros.fat * 0.9),
-      };
-    case "increase_protein":
-      return {
-        kcal: roundToTwo(baseMacros.kcal * 1.05),
-        protein: roundToTwo(baseMacros.protein * 1.2),
-        carbs: roundToTwo(baseMacros.carbs),
-        fat: roundToTwo(baseMacros.fat),
-      };
-    default:
-      return {
-        kcal: roundToTwo(baseMacros.kcal),
-        protein: roundToTwo(baseMacros.protein),
-        carbs: roundToTwo(baseMacros.carbs),
-        fat: roundToTwo(baseMacros.fat),
-      };
-  }
-};
-
-interface MockAiInput {
+interface AiAdaptationInput {
   recipe: RecipeDTO;
   profile: {
     allergens: string[];
@@ -230,36 +209,244 @@ interface MockAiInput {
   command: RecipeAdaptationRequestCommand;
 }
 
-interface MockAiCompletedResponse {
-  status: "completed";
+interface AiAdaptationResponse {
   recipeText: string;
-  macros: RecipeDTO["macros"];
+  macros: {
+    kcal: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
   explanation: string;
 }
 
-type MockAiResponse = MockAiCompletedResponse | { status: "pending" };
+/**
+ * Builds the system prompt for recipe adaptation
+ */
+const buildAdaptationSystemPrompt = (): string => {
+  return `You are an expert nutritionist and chef specializing in recipe adaptations. Your role is to modify recipes based on specific dietary goals while maintaining taste, feasibility, and nutritional accuracy.
 
-const generateMockProposal = async (input: MockAiInput): Promise<MockAiResponse> => {
-  const { recipe, command, profile } = input;
-  const macros = adaptMacros(command.goal, recipe.macros);
+**Your responsibilities:**
+1. Adapt recipes to meet the specified goal (e.g., reduce calories, increase protein)
+2. Respect user allergens and ingredient dislikes - completely remove or substitute these
+3. Provide accurate macronutrient calculations for the adapted recipe
+4. Explain the changes made in a clear, professional manner
+5. Ensure the adapted recipe is practical and achievable
 
-  const allergenText = profile.allergens.length > 0 ? `Avoided allergens: ${profile.allergens.join(", ")}. ` : "";
-  const dislikedText =
-    profile.dislikedIngredients.length > 0
-      ? `Excluded disliked ingredients: ${profile.dislikedIngredients.join(", ")}. `
-      : "";
-  const notesText = command.notes ? `User notes: ${command.notes}. ` : "";
+**Guidelines:**
+- For "remove_allergens": Completely remove allergenic ingredients and substitute with safe, equivalent alternatives
+- For "remove_disliked_ingredients": Remove disliked ingredients and substitute with preferred alternatives that maintain the dish's character
+- For "reduce_calories": Reduce by ~10-15% through lower-calorie substitutions, reduced portions, or cooking method changes
+- For "increase_protein": Increase protein by ~20-30% by adding protein-rich ingredients or larger portions of protein sources
+- Always recalculate macros accurately based on the new ingredients and portions
+- Maintain the recipe's appeal and practicality
+- Be specific about ingredient substitutions and quantity changes
+- Format the recipe text in clear markdown with sections for ingredients and instructions`;
+};
 
-  const explanation = `Adaptation goal '${command.goal}' applied. ${allergenText}${dislikedText}${notesText}`.trim();
+/**
+ * Builds the user prompt with recipe details and adaptation requirements
+ */
+const buildAdaptationUserPrompt = (input: AiAdaptationInput): string => {
+  const { recipe, profile, command } = input;
+  
+  const sections: string[] = [];
+  
+  // Recipe details
+  sections.push("**Original Recipe:**");
+  sections.push(`Title: ${recipe.title}`);
+  sections.push(`Servings: ${recipe.servings}`);
+  sections.push(`Current Macros: ${recipe.macros.kcal} kcal, ${recipe.macros.protein}g protein, ${recipe.macros.carbs}g carbs, ${recipe.macros.fat}g fat`);
+  sections.push("");
+  sections.push("**Recipe Content:**");
+  sections.push(recipe.recipeText);
+  sections.push("");
+  
+  // Adaptation goal
+  sections.push("**Adaptation Goal:**");
+  const goalDescriptions: Record<RecipeAdaptationRequestCommand["goal"], string> = {
+    remove_allergens: "Remove allergens and substitute with safe alternatives",
+    remove_disliked_ingredients: "Remove disliked ingredients and substitute with preferred alternatives",
+    reduce_calories: "Reduce calories while maintaining satiety and nutrition",
+    increase_protein: "Increase protein content for muscle building or maintenance",
+  };
+  sections.push(goalDescriptions[command.goal]);
+  sections.push("");
+  
+  // User constraints
+  if (profile.allergens.length > 0 || profile.dislikedIngredients.length > 0) {
+    sections.push("**CRITICAL Constraints:**");
+    if (profile.allergens.length > 0) {
+      sections.push(`- ALLERGENS TO AVOID: ${profile.allergens.join(", ")} - These MUST be completely removed or substituted`);
+    }
+    if (profile.dislikedIngredients.length > 0) {
+      sections.push(`- DISLIKED INGREDIENTS: ${profile.dislikedIngredients.join(", ")} - These should be removed or substituted`);
+    }
+    sections.push("");
+  }
+  
+  // Additional notes
+  if (command.notes && command.notes.trim().length > 0) {
+    sections.push("**Additional User Requirements:**");
+    sections.push(command.notes);
+    sections.push("");
+  }
+  
+  sections.push("**Instructions:**");
+  sections.push("Provide a fully adapted recipe with accurate macro calculations. Ensure all allergens and disliked ingredients are completely removed or substituted.");
+  
+  return sections.join("\n");
+};
 
-  const recipeText = `# ${recipe.title} (Adapted)\n\n${explanation}\n\n${recipe.recipeText}`;
+/**
+ * Defines the JSON schema for structured AI response
+ */
+const getAdaptationResponseSchema = (): JsonSchema => ({
+  type: "object",
+  properties: {
+    recipeText: {
+      type: "string",
+      description: "The complete adapted recipe in markdown format, including title, ingredients, and instructions",
+    },
+    macros: {
+      type: "object",
+      properties: {
+        kcal: {
+          type: "number",
+          description: "Total calories per serving",
+        },
+        protein: {
+          type: "number",
+          description: "Protein in grams per serving",
+        },
+        carbs: {
+          type: "number",
+          description: "Carbohydrates in grams per serving",
+        },
+        fat: {
+          type: "number",
+          description: "Fat in grams per serving",
+        },
+      },
+      required: ["kcal", "protein", "carbs", "fat"],
+      additionalProperties: false,
+    },
+    explanation: {
+      type: "string",
+      description: "A clear explanation of the changes made, why they were made, and how they achieve the goal",
+    },
+  },
+  required: ["recipeText", "macros", "explanation"],
+  additionalProperties: false,
+});
 
-  return {
-    status: "completed",
-    recipeText,
-    macros,
-    explanation,
-  } satisfies MockAiCompletedResponse;
+/**
+ * Generates a recipe adaptation using OpenRouter AI
+ */
+const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptationResponse> => {
+  console.log('Starting AI adaptation generation', {
+    recipeId: input.recipe.id,
+    goal: input.command.goal,
+    hasProfile: !!input.profile,
+  });
+
+  const systemMessage = buildSystemMessage(buildAdaptationSystemPrompt());
+  const userMessage = buildUserMessage(buildAdaptationUserPrompt(input));
+  
+  const responseFormat: ResponseFormat = {
+    type: "json_schema",
+    json_schema: {
+      name: "recipe_adaptation_response",
+      strict: true,
+      schema: getAdaptationResponseSchema(),
+    },
+  };
+  
+  console.log('Calling OpenRouter API for adaptation', {
+    messageCount: 2,
+    schema: responseFormat.json_schema.name,
+  });
+
+  try {
+    const response = await createStructuredChatCompletion<AiAdaptationResponse>(
+      [systemMessage, userMessage],
+      responseFormat,
+      {
+        parameters: {
+          temperature: 0.7,
+          max_tokens: 2000,
+        },
+      }
+    );
+    
+    console.log('OpenRouter API call successful', {
+      hasRecipeText: !!response.data.recipeText,
+      hasMacros: !!response.data.macros,
+      hasExplanation: !!response.data.explanation,
+    });
+    
+    // Round macros to 2 decimal places
+    const adaptedMacros = {
+      kcal: roundToTwo(response.data.macros.kcal),
+      protein: roundToTwo(response.data.macros.protein),
+      carbs: roundToTwo(response.data.macros.carbs),
+      fat: roundToTwo(response.data.macros.fat),
+    };
+    
+    return {
+      recipeText: response.data.recipeText,
+      macros: adaptedMacros,
+      explanation: response.data.explanation,
+    };
+  } catch (error) {
+    // Map OpenRouter errors to Adaptation errors
+    if (error instanceof OpenRouterServiceError) {
+      console.error("OpenRouter API error during adaptation", {
+        code: error.code,
+        message: error.message,
+        statusCode: error.statusCode,
+      });
+      
+      // Map specific OpenRouter errors to adaptation errors
+      if (error.code === "rate_limit_error" || error.code === "quota_exceeded_error") {
+        throw new AdaptationServiceError({
+          code: "quota_exceeded",
+          message: "AI service quota exceeded. Please try again later.",
+          cause: error,
+        });
+      }
+      
+      if (error.code === "timeout_error") {
+        throw new AdaptationServiceError({
+          code: "ai_timeout",
+          message: "AI service request timed out. Please try again.",
+          cause: error,
+        });
+      }
+      
+      if (error.code === "authentication_error" || error.code === "configuration_error") {
+        throw new AdaptationServiceError({
+          code: "proposal_generation_failed",
+          message: "AI service configuration error. Please contact support.",
+          cause: error,
+        });
+      }
+      
+      // Generic AI error
+      throw new AdaptationServiceError({
+        code: "ai_unprocessable",
+        message: "Unable to process adaptation request. Please try again.",
+        cause: error,
+      });
+    }
+    
+    // Unexpected error
+    throw new AdaptationServiceError({
+      code: "proposal_generation_failed",
+      message: "Failed to generate recipe adaptation.",
+      cause: error,
+    });
+  }
 };
 
 const ensureIdempotencyKey = (key: string | undefined) => {
@@ -683,7 +870,7 @@ const insertAdaptationLog = async (
 };
 
 const buildProposalDto = (
-  proposal: MockAiCompletedResponse,
+  proposal: AiAdaptationResponse,
   logId: string,
   command: RecipeAdaptationRequestCommand,
   quota: AdaptationQuotaUsage,
@@ -732,36 +919,44 @@ export const proposeAdaptation = async (
   inFlightAdaptations.add(inFlightKey);
 
   try {
+    console.log('Starting adaptation proposal', {
+      userId,
+      recipeId,
+      goal: command.goal,
+    });
+
     const profile = await getProfilePreferences(supabase, userId);
+    console.log('Profile loaded', {
+      allergenCount: profile.allergens.length,
+      dislikedCount: profile.dislikedIngredients.length,
+      timezone: profile.timezone,
+    });
+
     const recipe = await fetchRecipeForAdaptation(supabase, userId, recipeId);
+    console.log('Recipe loaded', {
+      recipeId: recipe.id,
+      title: recipe.title,
+    });
+
     const quota = await calculateQuota(supabase, userId, profile.timezone);
+    console.log('Quota calculated', {
+      used: quota.used,
+      limit: quota.limit,
+      remaining: quota.remaining,
+    });
 
     assertQuotaAvailable(quota);
 
     const logId = await insertAdaptationLog(supabase, userId, recipeId);
+    console.log('Adaptation log created', { logId });
 
-    const aiResponse = await generateMockProposal({
+    const aiResponse = await generateAiAdaptation({
       recipe,
       profile,
       command,
     });
 
-    if (aiResponse.status === "pending") {
-      const pendingResult: AdaptationPendingResult = {
-        status: "pending",
-        response: {
-          data: {
-            status: "pending",
-          },
-        },
-      };
-
-      if (cacheKey) {
-        idempotencyCache.set(cacheKey, pendingResult);
-      }
-
-      return pendingResult;
-    }
+    console.log('AI adaptation completed successfully');
 
     const proposalDto = buildProposalDto(aiResponse, logId, command, quota);
 

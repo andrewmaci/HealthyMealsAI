@@ -105,7 +105,7 @@ export interface ResponseFormat {
  */
 export interface ChatCompletionRequest {
   /**
-   * Model identifier (e.g., 'nvidia/nemotron-nano-12b-v2-vl:free')
+   * Model identifier (e.g., 'minimax/minimax-m2:free')
    */
   model: string;
 
@@ -340,10 +340,14 @@ const getOpenRouterConfig = (): OpenRouterConfig => {
     });
   }
 
+  // Default to a model that supports structured JSON output
+  // minimax/minimax-m2:free doesn't support json_schema mode
+  const defaultModel = import.meta.env.OPENROUTER_DEFAULT_MODEL || 'google/gemini-2.0-flash-exp:free';
+
   return {
     apiKey: apiKey.trim(),
     baseUrl,
-    defaultModel: import.meta.env.OPENROUTER_DEFAULT_MODEL || 'nvidia/nemotron-nano-12b-v2-vl:free',
+    defaultModel,
     requestTimeoutMs: parseInt(import.meta.env.OPENROUTER_REQUEST_TIMEOUT_MS || '60000', 10),
     maxRetries: parseInt(import.meta.env.OPENROUTER_MAX_RETRIES || '3', 10),
   };
@@ -680,6 +684,11 @@ const parseStructuredResponse = <T>(
   const choice = apiResponse.choices[0];
   
   if (!choice || !choice.message) {
+    console.error('Invalid API response structure', {
+      hasChoices: !!apiResponse.choices,
+      choicesLength: apiResponse.choices?.length,
+      apiResponse,
+    });
     throw new OpenRouterServiceError({
       code: 'json_parse_error',
       message: 'Invalid response structure from OpenRouter',
@@ -687,11 +696,24 @@ const parseStructuredResponse = <T>(
     });
   }
 
+  const messageContent = choice.message.content;
+  console.log('OpenRouter message content received', {
+    contentLength: messageContent?.length,
+    contentPreview: messageContent?.substring(0, 200),
+    finishReason: choice.finish_reason,
+    model: apiResponse.model,
+  });
+
   let parsedData: T;
   
   try {
-    parsedData = JSON.parse(choice.message.content) as T;
+    parsedData = JSON.parse(messageContent) as T;
   } catch (error) {
+    console.error('Failed to parse OpenRouter response as JSON', {
+      contentLength: messageContent?.length,
+      content: messageContent,
+      parseError: error instanceof Error ? error.message : String(error),
+    });
     throw new OpenRouterServiceError({
       code: 'json_parse_error',
       message: 'Failed to parse JSON response',
@@ -811,7 +833,7 @@ export const validateJsonSchema = (schema: JsonSchema): void => {
  *   { role: 'system', content: 'You are a helpful assistant.' },
  *   { role: 'user', content: 'What is TypeScript?' }
  * ], {
- *   model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+ *   model: 'minimax/minimax-m2:free',
  *   parameters: { temperature: 0.7, max_tokens: 500 }
  * });
  * console.log(response.content);
@@ -960,6 +982,12 @@ export const createStructuredChatCompletion = async <T = unknown>(
     async () => {
       const httpResponse = await executeRequest('/chat/completions', payload, config);
       
+      console.log('OpenRouter HTTP response received', {
+        status: httpResponse.status,
+        statusText: httpResponse.statusText,
+        ok: httpResponse.ok,
+      });
+
       if (!httpResponse.ok) {
         await handleErrorResponse(httpResponse);
       }
@@ -967,7 +995,16 @@ export const createStructuredChatCompletion = async <T = unknown>(
       let apiResponse: ChatCompletionResponse;
       try {
         apiResponse = await httpResponse.json();
+        console.log('OpenRouter API response parsed', {
+          hasChoices: !!apiResponse.choices,
+          choicesCount: apiResponse.choices?.length,
+          model: apiResponse.model,
+          id: apiResponse.id,
+        });
       } catch (error) {
+        console.error('Failed to parse OpenRouter HTTP response', {
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw new OpenRouterServiceError({
           code: 'json_parse_error',
           message: 'Failed to parse API response',

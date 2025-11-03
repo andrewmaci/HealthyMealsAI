@@ -125,26 +125,62 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         case "invalid_idempotency_key":
           return buildJsonResponse({ error: error.message }, 400);
         case "proposal_generation_failed":
+          console.error("Proposal generation failed", {
+            userId,
+            recipeId: recipeIdResult.data,
+            errorMessage: error.message,
+            cause: error.cause,
+          });
           return buildJsonResponse({ error: "Failed to generate adaptation proposal." }, 500);
+        case "quota_fetch_failed":
+          console.error("Quota fetch failed", {
+            userId,
+            recipeId: recipeIdResult.data,
+            errorMessage: error.message,
+            cause: error.cause,
+          });
+          return buildJsonResponse({ error: "Failed to fetch user profile or quota." }, 500);
+        case "ai_timeout":
+          return buildJsonResponse({ error: "AI service timeout. Please try again." }, 504);
+        case "ai_unprocessable":
+          console.error("AI unprocessable error", {
+            userId,
+            recipeId: recipeIdResult.data,
+            errorMessage: error.message,
+            cause: error.cause,
+          });
+          return buildJsonResponse({ error: "Unable to process adaptation request. Please try again." }, 422);
         default:
-          console.error("Adaptation service error during proposal", {
+          console.error("Adaptation service error during proposal (unhandled code)", {
             userId,
             recipeId: recipeIdResult.data,
             code: error.code,
-            error,
+            message: error.message,
+            cause: error.cause,
+            stack: error.stack,
           });
 
-          return buildJsonResponse({ error: "Failed to process adaptation request." }, 500);
+          return buildJsonResponse({ 
+            error: "Failed to process adaptation request.",
+            details: error.message,
+            errorCode: error.code,
+          }, 500);
       }
     }
 
-    console.error("Unexpected error while proposing adaptation", {
+    console.error("Unexpected error while proposing adaptation (not AdaptationServiceError)", {
       userId,
       recipeId: recipeIdResult.data,
+      errorType: error?.constructor?.name,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
       error,
     });
 
-    return buildJsonResponse({ error: "Failed to process adaptation request." }, 500);
+    return buildJsonResponse({ 
+      error: "Failed to process adaptation request.",
+      details: error instanceof Error ? error.message : "Unknown error",
+    }, 500);
   }
 };
 

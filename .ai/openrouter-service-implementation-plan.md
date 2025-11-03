@@ -52,7 +52,7 @@ Create or update `.env` file with:
 # OpenRouter Configuration
 OPENROUTER_API_KEY=your_api_key_here
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_DEFAULT_MODEL=nvidia/nemotron-nano-12b-v2-vl:free
+OPENROUTER_DEFAULT_MODEL=minimax/minimax-m2:free
 OPENROUTER_REQUEST_TIMEOUT_MS=60000
 OPENROUTER_MAX_RETRIES=3
 ```
@@ -205,7 +205,7 @@ export interface ResponseFormat {
  */
 export interface ChatCompletionRequest {
   /**
-   * Model identifier (e.g., 'nvidia/nemotron-nano-12b-v2-vl:free')
+   * Model identifier (e.g., 'minimax/minimax-m2:free')
    */
   model: string;
 
@@ -660,7 +660,7 @@ const DEFAULT_RETRY_OPTIONS: RetryOptions = {
  *   { role: 'system', content: 'You are a helpful assistant.' },
  *   { role: 'user', content: 'What is TypeScript?' }
  * ], {
- *   model: 'nvidia/nemotron-nano-12b-v2-vl:free',
+ *   model: 'minimax/minimax-m2:free',
  *   parameters: { temperature: 0.7, max_tokens: 500 }
  * });
  * console.log(response.content);
@@ -1267,7 +1267,7 @@ const ensureSecureConnection = (url: string): void => {
    ```bash
    OPENROUTER_API_KEY=your_key_here
    OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-   OPENROUTER_DEFAULT_MODEL=nvidia/nemotron-nano-12b-v2-vl:free
+   OPENROUTER_DEFAULT_MODEL=minimax/minimax-m2:free
    OPENROUTER_REQUEST_TIMEOUT_MS=60000
    OPENROUTER_MAX_RETRIES=3
    ```
@@ -1387,7 +1387,7 @@ const getOpenRouterConfig = (): OpenRouterConfig => {
   return {
     apiKey: apiKey.trim(),
     baseUrl,
-    defaultModel: import.meta.env.OPENROUTER_DEFAULT_MODEL || 'nvidia/nemotron-nano-12b-v2-vl:free',
+    defaultModel: import.meta.env.OPENROUTER_DEFAULT_MODEL || 'minimax/minimax-m2:free',
     requestTimeoutMs: parseInt(import.meta.env.OPENROUTER_REQUEST_TIMEOUT_MS || '60000', 10),
     maxRetries: parseInt(import.meta.env.OPENROUTER_MAX_RETRIES || '3', 10),
   };
