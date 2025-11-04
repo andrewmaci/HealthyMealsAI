@@ -45,6 +45,7 @@ Notable dependencies and tooling:
 - React 19, `lucide-react`
 - Tailwind CSS 4 (`@tailwindcss/vite`), `clsx`, `class-variance-authority`, `tailwind-merge`
 - Linting/Formatting: ESLint 9, Prettier (with `prettier-plugin-astro`)
+- Testing: Vitest, React Testing Library, Playwright, MSW
 - Node runtime: see `.nvmrc` → `22.14.0`
 
 ### Getting started locally

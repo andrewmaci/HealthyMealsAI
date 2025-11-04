@@ -26,3 +26,11 @@
 ## CI/CD and Hosting
 * **Github Actions** for creating CI/CD pipelines.
 * **DigitalOcean** for hosting the application via a Docker image.
+
+---
+
+## Testing
+* **Vitest** for unit and component testing.
+* **React Testing Library** for testing React components.
+* **Playwright** for end-to-end (E2E) testing.
+* **Mock Service Worker (MSW)** for API mocking.
