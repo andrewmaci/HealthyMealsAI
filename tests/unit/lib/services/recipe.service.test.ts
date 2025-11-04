@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Tables } from "../../../../src/db/database.types";
-import { buildUpdatePayload, mapRecipeRowToDTO } from "../../../../src/lib/services/recipe.service";
+import type { SupabaseClient } from "../../../../src/db/supabase.client";
+import {
+  RecipeServiceError,
+  buildUpdatePayload,
+  createRecipe,
+  mapRecipeRowToDTO,
+} from "../../../../src/lib/services/recipe.service";
 
 const createRecipeRow = (overrides: Partial<Tables<"recipes">> = {}): Tables<"recipes"> => ({
   id: "recipe-123",
@@ -18,6 +24,47 @@ const createRecipeRow = (overrides: Partial<Tables<"recipes">> = {}): Tables<"re
   user_id: "user-456",
   ...overrides,
 });
+
+interface SupabaseRecipesBuilderMock {
+  insert: ReturnType<typeof vi.fn>;
+  select: ReturnType<typeof vi.fn>;
+  single: ReturnType<typeof vi.fn>;
+}
+
+const createSupabaseClientMock = (
+  builderFactory: () => SupabaseRecipesBuilderMock
+): {
+  supabase: SupabaseClient;
+  spies: SupabaseRecipesBuilderMock & { from: ReturnType<typeof vi.fn> };
+} => {
+  const builder = builderFactory();
+  const from = vi.fn((table: string) => {
+    if (table !== "recipes") {
+      throw new Error(`Unexpected table: ${table}`);
+    }
+
+    return builder;
+  });
+
+  const supabase = { from } as unknown as SupabaseClient;
+
+  return {
+    supabase,
+    spies: {
+      from,
+      ...builder,
+    },
+  };
+};
+
+const createInsertBuilder = (response: { data: Tables<"recipes"> | null; error: unknown }) => {
+  const single = vi.fn().mockResolvedValue(response);
+  const builder: Partial<SupabaseRecipesBuilderMock> = {};
+  builder.insert = vi.fn().mockReturnValue(builder);
+  builder.select = vi.fn().mockReturnValue(builder);
+  builder.single = single;
+  return builder as SupabaseRecipesBuilderMock;
+};
 
 describe("mapRecipeRowToDTO", () => {
   it("maps a complete recipe row to the DTO shape", () => {
@@ -106,5 +153,71 @@ describe("buildUpdatePayload", () => {
     const payload = buildUpdatePayload({});
 
     expect(payload).toStrictEqual({});
+  });
+});
+
+describe("createRecipe", () => {
+  it("inserts a new recipe and returns the mapped DTO", async () => {
+    const row = createRecipeRow();
+    const { supabase, spies } = createSupabaseClientMock(() => createInsertBuilder({ data: row, error: null }));
+
+    const result = await createRecipe(supabase, "user-456", {
+      title: row.title,
+      servings: row.servings,
+      macros: {
+        kcal: row.kcal,
+        protein: row.protein,
+        carbs: row.carbs,
+        fat: row.fat,
+      },
+      recipeText: row.recipe_text,
+      lastAdaptationExplanation: row.last_adaptation_explanation ?? undefined,
+    });
+
+    expect(spies.from).toHaveBeenCalledWith("recipes");
+    expect(spies.insert).toHaveBeenCalledWith({
+      title: row.title,
+      servings: row.servings,
+      kcal: row.kcal,
+      protein: row.protein,
+      carbs: row.carbs,
+      fat: row.fat,
+      recipe_text: row.recipe_text,
+      last_adaptation_explanation: row.last_adaptation_explanation,
+      user_id: "user-456",
+    });
+    expect(spies.select).toHaveBeenCalledTimes(1);
+    expect(spies.single).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(mapRecipeRowToDTO(row));
+  });
+
+  it("throws a RecipeServiceError when insertion fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { supabase, spies } = createSupabaseClientMock(() =>
+      createInsertBuilder({ data: null, error: new Error("insert failed") })
+    );
+
+    const action = () =>
+      createRecipe(supabase, "user-456", {
+        title: "Test",
+        servings: 2,
+        macros: { kcal: 200, protein: 10, carbs: 20, fat: 5 },
+        recipeText: "Mix and serve",
+      });
+
+    const thrown = await action().catch((error) => error);
+
+    expect(thrown).toBeInstanceOf(RecipeServiceError);
+    expect(thrown).toMatchObject({
+      code: "insert_failed",
+      message: "Unable to create recipe",
+    });
+
+    expect(spies.insert).toHaveBeenCalled();
+    expect(spies.select).toHaveBeenCalled();
+    expect(spies.single).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
   });
 });
