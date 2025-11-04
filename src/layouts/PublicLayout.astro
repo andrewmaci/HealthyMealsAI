@@ -10,6 +10,9 @@ const {
   title = "HealthyMealsAI",
   description,
 } = Astro.props as Props;
+
+const session = Astro.locals.session;
+const isAuthenticated = Boolean(session?.user?.id);
 ---
 
 <!doctype html>
@@ -24,14 +27,20 @@ const {
   <body class="min-h-screen bg-background text-foreground">
     <div class="flex min-h-screen flex-col">
       <header class="border-b border-border bg-card/40">
-        <div class="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
+        <div
+          class={`mx-auto flex w-full max-w-5xl items-center px-6 py-4 ${
+            isAuthenticated ? "justify-between" : "justify-center"
+          }`}
+        >
           <a href="/" class="text-base font-semibold tracking-tight text-foreground">
             HealthyMealsAI
           </a>
-          <nav class="flex items-center gap-3 text-sm text-muted-foreground">
-            <a class="hover:text-foreground" href="/recipes">Recipes</a>
-            <a class="hover:text-foreground" href="/profile">Profile</a>
-          </nav>
+          {isAuthenticated ? (
+            <nav class="flex items-center gap-3 text-sm text-muted-foreground">
+              <a class="hover:text-foreground" href="/recipes">Recipes</a>
+              <a class="hover:text-foreground" href="/profile">Profile</a>
+            </nav>
+          ) : null}
         </div>
       </header>
       <main class="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
