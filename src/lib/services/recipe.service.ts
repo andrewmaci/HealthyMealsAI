@@ -37,7 +37,7 @@ export class RecipeServiceError extends Error {
   }
 }
 
-const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
+export const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
   id: row.id,
   title: row.title,
   servings: row.servings,
@@ -253,7 +253,7 @@ type UpdateRecipeResult =
   | (UpdateRecipeResultBase & { returnMode: "minimal" })
   | (UpdateRecipeResultBase & { returnMode: "full"; recipe: RecipeDTO });
 
-const buildUpdatePayload = (command: RecipeUpdateCommand) => {
+export const buildUpdatePayload = (command: RecipeUpdateCommand) => {
   const payload: Partial<TablesUpdate<"recipes">> = {};
 
   if (command.title !== undefined) {
