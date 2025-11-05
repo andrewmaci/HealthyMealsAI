@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 import ErrorBanner from "./components/ErrorBanner";
 import EmptyState from "./components/EmptyState";
 import FilterButton from "./components/FilterButton";
@@ -100,10 +102,17 @@ const RecipeListView = () => {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Recipes</h1>
-        <p className="text-sm text-muted-foreground">Search, filter, and manage your saved recipes.</p>
-      </header>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <header className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">Recipes</h1>
+          <p className="text-sm text-muted-foreground">Search, filter, and manage your saved recipes.</p>
+        </header>
+        <Button asChild size="sm" className="w-full md:w-auto md:self-start">
+          <a href="/recipes/new" aria-label="Create a new recipe">
+            Create recipe
+          </a>
+        </Button>
+      </div>
 
       <section className="flex flex-col gap-3 rounded-xl border border-border bg-card/50 p-4 backdrop-blur transition md:flex-row md:items-center md:justify-between">
         <SearchBar value={query.search} onChange={handleSearchChange} isLoading={isLoading} className="md:flex-1" />
