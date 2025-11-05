@@ -20,6 +20,7 @@ interface FormFieldProps extends InputBaseProps {
   description?: string;
   inputMode?: "text" | "email" | "numeric";
   id?: string;
+  dataTestId?: string;
 }
 
 export function FormField({
@@ -40,6 +41,7 @@ export function FormField({
   minLength,
   spellCheck,
   id,
+  dataTestId,
 }: FormFieldProps) {
   const generatedId = useId();
   const inputId = id ?? `${generatedId}-${name}`;
@@ -72,6 +74,7 @@ export function FormField({
           name={name}
           type={inputType}
           value={value}
+          data-test-id={dataTestId}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}

@@ -708,7 +708,12 @@ export default function RecipeForm({
   const submitLabel = mode === "create" ? "Create recipe" : "Save changes";
 
   return (
-    <form className="mx-auto flex w-full max-w-3xl flex-col gap-6" onSubmit={handleSubmit} noValidate>
+    <form
+      className="mx-auto flex w-full max-w-3xl flex-col gap-6"
+      onSubmit={handleSubmit}
+      noValidate
+      data-test-id="recipe-form"
+    >
       <FieldGroup
         label="Title"
         htmlFor={ids.title}
@@ -722,6 +727,7 @@ export default function RecipeForm({
           name="title"
           type="text"
           value={values.title}
+          data-test-id="recipe-form-title-input"
           onChange={(event) => {
             const nextValue = event.target.value;
             setValues((current) => ({
@@ -757,6 +763,7 @@ export default function RecipeForm({
           min={1}
           max={50}
           value={values.servings}
+          data-test-id="recipe-form-servings-input"
           onChange={(event) => {
             const nextValue = event.target.value;
             setValues((current) => ({
@@ -796,6 +803,7 @@ export default function RecipeForm({
                   step="0.01"
                   min={0}
                   value={values.macros[key]}
+                  data-test-id={`recipe-form-macro-${key}-input`}
                   onChange={(event) => {
                     const nextValue = event.target.value;
                     setValues((current) => ({
@@ -834,6 +842,7 @@ export default function RecipeForm({
           ref={recipeTextRef}
           name="recipeText"
           value={values.recipeText}
+          data-test-id="recipe-form-instructions-textarea"
           onChange={(event) => {
             const nextValue = event.target.value;
             setValues((current) => ({
@@ -865,6 +874,7 @@ export default function RecipeForm({
           className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
           aria-expanded={showAdvanced}
           aria-controls={showAdvanced ? ids.explanation : undefined}
+          data-test-id="recipe-form-toggle-advanced-button"
         >
           {showAdvanced ? "Hide advanced fields" : "Show adaptation explanation"}
         </button>
@@ -883,6 +893,7 @@ export default function RecipeForm({
               ref={explanationRef}
               name="lastAdaptationExplanation"
               value={values.lastAdaptationExplanation ?? ""}
+              data-test-id="recipe-form-explanation-textarea"
               onChange={(event) => {
                 const nextValue = event.target.value;
                 setValues((current) => ({
@@ -929,10 +940,21 @@ export default function RecipeForm({
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" disabled={isSubmitting || isOverLimit} aria-disabled={isSubmitting || isOverLimit}>
+        <Button
+          type="submit"
+          disabled={isSubmitting || isOverLimit}
+          aria-disabled={isSubmitting || isOverLimit}
+          data-test-id="recipe-form-submit-button"
+        >
           {isSubmitting ? "Saving…" : submitLabel}
         </Button>
-        <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleCancel}
+          disabled={isSubmitting}
+          data-test-id="recipe-form-cancel-button"
+        >
           Cancel
         </Button>
         {isOverLimit ? (

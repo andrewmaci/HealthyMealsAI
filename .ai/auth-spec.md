@@ -2004,7 +2004,7 @@ For MVP, ensure in Supabase Dashboard > Authentication > Settings:
 
 **Development (.env.local):**
 ```env
-SUPABASE_URL=http://localhost:54321
+SUPABASE_URL=http://localhost:53000
 SUPABASE_KEY=[local-anon-key]
 OPENROUTER_API_KEY=[your-key]
 ```

@@ -101,14 +101,14 @@ const RecipeListView = () => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8" data-test-id="recipes-list-view">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Recipes</h1>
           <p className="text-sm text-muted-foreground">Search, filter, and manage your saved recipes.</p>
         </header>
         <Button asChild size="sm" className="w-full md:w-auto md:self-start">
-          <a href="/recipes/new" aria-label="Create a new recipe">
+          <a href="/recipes/new" aria-label="Create a new recipe" data-test-id="recipes-create-button">
             Create recipe
           </a>
         </Button>
