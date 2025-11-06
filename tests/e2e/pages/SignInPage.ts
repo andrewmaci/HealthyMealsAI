@@ -29,7 +29,7 @@ export class SignInPage extends BasePage {
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     await this.form.click();
-    await this.submitButton.click();
+    await this.submitButton.press('Enter');
   }
 }
 
