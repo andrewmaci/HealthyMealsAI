@@ -133,7 +133,7 @@ In scope (MVP):
 - User accounts and personal profiles for allergens/dislikes
 - Text-only recipes with CRUD operations and validation
 - Single‑goal AI adaptation per run with strict JSON output and acceptance overwrite
-- Quotas (10/day), input limits, safety guardrails, disclaimers
+- Quotas (20/day), input limits, safety guardrails, disclaimers
 
 Out of scope (MVP):
 - Importing recipes from URLs
