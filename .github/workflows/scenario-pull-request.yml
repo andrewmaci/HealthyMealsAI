@@ -34,6 +34,7 @@ jobs:
     name: ${{ matrix.job-name }}
     runs-on: ubuntu-latest
     needs: lint
+    environment: HealthyAIEnv
     strategy:
       fail-fast: false
       matrix:
