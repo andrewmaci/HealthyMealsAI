@@ -244,7 +244,7 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
       description="Access your personalized meal plans and saved recipes."
       footer={footer}
     >
-      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate data-test-id="auth-signin-form">
         {formError ? (
           <div className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
             {formError}
@@ -256,6 +256,7 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
           name="email"
           type="email"
           value={values.email}
+          dataTestId="auth-signin-email-input"
           onChange={(next) => {
             setValues((current) => ({
               ...current,
@@ -276,6 +277,7 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
           name="password"
           type="password"
           value={values.password}
+          dataTestId="auth-signin-password-input"
           onChange={(next) => {
             setValues((current) => ({
               ...current,
@@ -297,7 +299,13 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
           </a>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting} aria-disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isSubmitting}
+          aria-disabled={isSubmitting}
+          data-test-id="auth-signin-submit-button"
+        >
           {isSubmitting ? "Signing in…" : "Sign in"}
         </Button>
       </form>

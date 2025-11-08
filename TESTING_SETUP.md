@@ -81,7 +81,7 @@ npm run test:all              # Run both unit and E2E tests
 ### Playwright Configuration (`playwright.config.ts`)
 - Test directory: `tests/e2e`
 - Browser: Chromium (Desktop Chrome)
-- Base URL: http://localhost:4321
+- Base URL: http://localhost:3000
 - Features:
   - Trace on first retry
   - Screenshot on failure
@@ -227,7 +227,7 @@ Playwright will automatically start your dev server and run the tests.
 
 ### Playwright Issues
 - Reinstall browsers: `npx playwright install chromium`
-- Check that dev server is accessible at http://localhost:4321
+- Check that dev server is accessible at http://localhost:3000
 
 ### Coverage Issues
 - Install coverage provider: `npm install -D @vitest/coverage-v8`

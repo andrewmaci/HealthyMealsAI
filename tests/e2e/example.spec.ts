@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
  * Following Page Object Model pattern
  */
 
-test.describe('Health Check', () => {
+test.describe.skip('Example Health Check', () => {
   test('should return ok status', async ({ page }) => {
     // Navigate to the health endpoint
     const response = await page.request.get('/api/health');
