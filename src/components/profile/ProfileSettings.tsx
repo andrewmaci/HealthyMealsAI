@@ -2,14 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Loader2, LogIn, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 import { ProfileCompletionPrompt } from "./ProfileCompletionPrompt";
@@ -39,13 +32,7 @@ interface AlertState {
 }
 
 export default function ProfileSettings() {
-  const {
-    data,
-    status,
-    lastModified,
-    error,
-    refetch,
-  } = useProfile();
+  const { data, status, lastModified, error, refetch } = useProfile();
   const [dismissedPrompt, setDismissedPrompt] = useState(false);
   const [alert, setAlert] = useState<AlertState>({
     kind: "none",
@@ -78,10 +65,7 @@ export default function ProfileSettings() {
     setAlert({ kind: "none" });
   };
 
-  const {
-    save,
-    saving,
-  } = useSaveProfile({
+  const { save, saving } = useSaveProfile({
     lastModified,
     onSuccess() {
       setAlert({
@@ -161,9 +145,7 @@ export default function ProfileSettings() {
       <Card className="mx-auto mt-12 w-full max-w-2xl">
         <CardHeader>
           <CardTitle>Sign in required</CardTitle>
-          <CardDescription>
-            You need to sign in to manage your dietary preferences.
-          </CardDescription>
+          <CardDescription>You need to sign in to manage your dietary preferences.</CardDescription>
         </CardHeader>
         <CardFooter>
           <Button asChild>
@@ -182,9 +164,7 @@ export default function ProfileSettings() {
       <Card className="mx-auto mt-12 w-full max-w-3xl">
         <CardHeader>
           <CardTitle>Profile unavailable</CardTitle>
-          <CardDescription>
-            We could not load your profile. Please try again.
-          </CardDescription>
+          <CardDescription>We could not load your profile. Please try again.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-3 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-destructive">
@@ -211,7 +191,8 @@ export default function ProfileSettings() {
     return null;
   }
 
-  const showCompletionPrompt = !dismissedPrompt && initialValues.allergens.length === 0 && initialValues.dislikedIngredients.length === 0;
+  const showCompletionPrompt =
+    !dismissedPrompt && initialValues.allergens.length === 0 && initialValues.dislikedIngredients.length === 0;
 
   return (
     <Card className="mx-auto mt-12 w-full max-w-4xl">
@@ -220,11 +201,7 @@ export default function ProfileSettings() {
         <CardDescription>
           Manage allergens, disliked ingredients, and your timezone so we can tailor meals to you.
         </CardDescription>
-        {lastModified && (
-          <p className="text-xs text-muted-foreground">
-            Last updated {formatTimestamp(lastModified)}
-          </p>
-        )}
+        {lastModified && <p className="text-xs text-muted-foreground">Last updated {formatTimestamp(lastModified)}</p>}
       </CardHeader>
       <CardContent className="space-y-6">
         {alert.kind !== "none" && (
@@ -236,17 +213,14 @@ export default function ProfileSettings() {
               alert.kind === "success" && "border-emerald-200 bg-emerald-50 text-emerald-900",
               alert.kind === "network" && "border-amber-200 bg-amber-50 text-amber-900",
               (alert.kind === "error" || alert.kind === "conflict") &&
-                "border-destructive/40 bg-destructive/10 text-destructive",
+                "border-destructive/40 bg-destructive/10 text-destructive"
             )}
           >
             {alert.kind === "success" ? (
               <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />
             ) : (
               <AlertCircle
-                className={cn(
-                  "h-5 w-5",
-                  alert.kind === "network" ? "text-amber-600" : "text-destructive",
-                )}
+                className={cn("h-5 w-5", alert.kind === "network" ? "text-amber-600" : "text-destructive")}
                 aria-hidden="true"
               />
             )}
@@ -265,7 +239,7 @@ export default function ProfileSettings() {
                   className={cn(
                     "text-muted-foreground",
                     alert.kind === "success" && "text-emerald-700",
-                    alert.kind === "network" && "text-amber-700",
+                    alert.kind === "network" && "text-amber-700"
                   )}
                 >
                   {alert.message}
@@ -285,32 +259,16 @@ export default function ProfileSettings() {
                 </Button>
               )}
               {alert.kind !== "conflict" && alert.kind !== "none" && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="px-0 text-xs"
-                  onClick={dismissAlert}
-                >
+                <Button size="sm" variant="ghost" className="px-0 text-xs" onClick={dismissAlert}>
                   Dismiss
                 </Button>
               )}
             </div>
           </div>
         )}
-        {showCompletionPrompt && (
-          <ProfileCompletionPrompt
-            visible
-            onDismiss={() => setDismissedPrompt(true)}
-          />
-        )}
-        <ProfileForm
-          initialValues={initialValues}
-          lastModified={lastModified}
-          saving={saving}
-          onSave={save}
-        />
+        {showCompletionPrompt && <ProfileCompletionPrompt visible onDismiss={() => setDismissedPrompt(true)} />}
+        <ProfileForm initialValues={initialValues} lastModified={lastModified} saving={saving} onSave={save} />
       </CardContent>
     </Card>
   );
 }
-

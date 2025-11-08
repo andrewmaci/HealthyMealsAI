@@ -9,9 +9,7 @@ export interface ProfileFormErrors {
   form?: string;
 }
 
-export interface SaveSuccessHandler {
-  (next: ProfileDTO, lastModified: string): void;
-}
+export type SaveSuccessHandler = (next: ProfileDTO, lastModified: string) => void;
 
 export type SaveError =
   | { kind: "validation"; details?: string }
@@ -44,4 +42,3 @@ export interface UseSaveProfileResult {
 }
 
 export type ProfileResponseBody = ProfileResponseDTO;
-

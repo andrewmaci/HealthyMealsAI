@@ -73,16 +73,19 @@ export function RecoverPasswordForm() {
         setIsSubmitting(false);
       }
     },
-    [email],
+    [email]
   );
 
   const footer = useMemo(
     () => (
       <p>
-        Remembered your password? <a href="/auth/signin" className="font-medium text-primary hover:underline">Return to sign in</a>
+        Remembered your password?{" "}
+        <a href="/auth/signin" className="font-medium text-primary hover:underline">
+          Return to sign in
+        </a>
       </p>
     ),
-    [],
+    []
   );
 
   return (
@@ -93,11 +96,7 @@ export function RecoverPasswordForm() {
     >
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {formMessage ? (
-          <div
-            className="rounded-md border border-border/60 bg-muted/10 p-3 text-sm"
-            role="status"
-            aria-live="polite"
-          >
+          <div className="rounded-md border border-border/60 bg-muted/10 p-3 text-sm" role="status" aria-live="polite">
             {formMessage}
           </div>
         ) : null}
@@ -114,7 +113,8 @@ export function RecoverPasswordForm() {
                 return previous;
               }
 
-              const { email: _removed, ...rest } = previous;
+              const { email: removed, ...rest } = previous;
+              void removed;
               return rest;
             });
             setFormMessage(undefined);
@@ -128,7 +128,8 @@ export function RecoverPasswordForm() {
                   return previous;
                 }
 
-                const { email: _removed, ...rest } = previous;
+                const { email: removed, ...rest } = previous;
+                void removed;
                 return rest;
               }
 
@@ -155,5 +156,3 @@ export function RecoverPasswordForm() {
     </AuthFormLayout>
   );
 }
-
-

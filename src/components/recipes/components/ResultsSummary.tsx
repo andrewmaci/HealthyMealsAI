@@ -1,9 +1,9 @@
 import type { PaginationDTO } from "@/types";
 
-type ResultsSummaryProps = {
+interface ResultsSummaryProps {
   pagination: PaginationDTO;
   itemsOnPage: number;
-};
+}
 
 const ResultsSummary = ({ pagination, itemsOnPage }: ResultsSummaryProps) => {
   if (pagination.totalItems === 0) {
@@ -15,11 +15,10 @@ const ResultsSummary = ({ pagination, itemsOnPage }: ResultsSummaryProps) => {
 
   return (
     <p className="text-sm text-muted-foreground">
-      Showing <span className="font-medium">{start}</span>–<span className="font-medium">{end}</span> of {" "}
+      Showing <span className="font-medium">{start}</span>–<span className="font-medium">{end}</span> of{" "}
       <span className="font-medium">{pagination.totalItems}</span> recipes
     </p>
   );
 };
 
 export default ResultsSummary;
-

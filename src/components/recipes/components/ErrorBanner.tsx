@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 
 import type { ApiError } from "../types";
 
-type ErrorBannerProps = {
+interface ErrorBannerProps {
   error?: ApiError;
   onRetry: () => void;
-};
+}
 
 const ErrorBanner = ({ error, onRetry }: ErrorBannerProps) => {
   if (!error) {
@@ -19,7 +19,11 @@ const ErrorBanner = ({ error, onRetry }: ErrorBannerProps) => {
           <p className="font-semibold">{error.message}</p>
           {error.status === 401 ? (
             <p className="text-xs text-muted-foreground">
-              You may need to <a href="/login" className="underline">sign in</a> again.
+              You may need to{" "}
+              <a href="/login" className="underline">
+                sign in
+              </a>{" "}
+              again.
             </p>
           ) : null}
         </div>
@@ -32,4 +36,3 @@ const ErrorBanner = ({ error, onRetry }: ErrorBannerProps) => {
 };
 
 export default ErrorBanner;
-

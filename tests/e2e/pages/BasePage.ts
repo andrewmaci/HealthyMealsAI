@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page } from "@playwright/test";
 
 /**
  * Base Page Object Model class
@@ -19,7 +19,7 @@ export class BasePage {
    * Wait for page to be fully loaded
    */
   async waitForLoad() {
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
   }
 
   /**
@@ -36,4 +36,3 @@ export class BasePage {
     await this.page.screenshot({ path: `test-results/screenshots/${name}.png` });
   }
 }
-

@@ -32,4 +32,3 @@ export function useTimezones(): TimezoneOption[] {
 
   return useMemo(() => options, [options]);
 }
-

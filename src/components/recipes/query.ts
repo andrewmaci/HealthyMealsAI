@@ -112,8 +112,10 @@ const sanitizeFilters = (values: FilterFormValues): FilterFormValues => {
 export const parseQueryFromSearchParams = (searchParams: URLSearchParams): RecipeListQueryState => {
   const page = clamp(coerceInt(searchParams.get("page")) ?? DEFAULT_QUERY.page, 1, Number.MAX_SAFE_INTEGER);
   const pageSize = clamp(coerceInt(searchParams.get("pageSize")) ?? DEFAULT_QUERY.pageSize, 1, 50);
-  const sortBy = isSortBy(searchParams.get("sortBy")) ? searchParams.get("sortBy")! : DEFAULT_QUERY.sortBy;
-  const sortOrder = isSortOrder(searchParams.get("sortOrder")) ? searchParams.get("sortOrder")! : DEFAULT_QUERY.sortOrder;
+  const sortByParam = searchParams.get("sortBy");
+  const sortBy = isSortBy(sortByParam) ? sortByParam : DEFAULT_QUERY.sortBy;
+  const sortOrderParam = searchParams.get("sortOrder");
+  const sortOrder = isSortOrder(sortOrderParam) ? sortOrderParam : DEFAULT_QUERY.sortOrder;
   const search = searchParams.get("search")?.trim() ?? undefined;
   const minKcal = coerceNumber(searchParams.get("minKcal"));
   const maxKcal = coerceNumber(searchParams.get("maxKcal"));
@@ -192,7 +194,7 @@ const normalizeQuery = (input: RecipeListQueryState): RecipeListQueryState => {
   return normalized;
 };
 
-export const useDebouncedValue = <T,>(value: T, delay: number) => {
+export const useDebouncedValue = <T>(value: T, delay: number) => {
   const [debounced, setDebounced] = useState(value);
 
   useEffect(() => {
@@ -206,10 +208,10 @@ export const useDebouncedValue = <T,>(value: T, delay: number) => {
   return debounced;
 };
 
-type UseQueryStateSyncResult = {
+interface UseQueryStateSyncResult {
   query: RecipeListQueryState;
   setQuery: (updater: (current: RecipeListQueryState) => RecipeListQueryState) => void;
-};
+}
 
 export const useQueryStateSync = (): UseQueryStateSyncResult => {
   const [query, setQueryState] = useState<RecipeListQueryState>(() => {
@@ -255,13 +257,13 @@ export const useQueryStateSync = (): UseQueryStateSyncResult => {
   return { query, setQuery };
 };
 
-type UseRecipesResult = {
+interface UseRecipesResult {
   data?: RecipeListResponseDTO;
   items: RecipeListItemVM[];
   isLoading: boolean;
   error?: ApiError;
   refetch: () => void;
-};
+}
 
 const mapRecipeDtoToVM = (dto: RecipeListResponseDTO["data"][number]): RecipeListItemVM => ({
   id: dto.id,
@@ -271,7 +273,7 @@ const mapRecipeDtoToVM = (dto: RecipeListResponseDTO["data"][number]): RecipeLis
   updatedAtIso: dto.updatedAt,
   updatedAtRelative: new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(
     Math.round((new Date(dto.updatedAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-    "day",
+    "day"
   ),
 });
 
@@ -364,4 +366,3 @@ export const useRecipes = (query: RecipeListQueryState): UseRecipesResult => {
     refetch,
   };
 };
-

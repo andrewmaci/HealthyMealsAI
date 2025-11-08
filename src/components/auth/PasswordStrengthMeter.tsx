@@ -67,7 +67,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
                 !isActive && "bg-muted",
                 isActive && level === "weak" && "bg-destructive/70",
                 isActive && level === "medium" && "bg-amber-400",
-                isActive && level === "strong" && "bg-emerald-500",
+                isActive && level === "strong" && "bg-emerald-500"
               )}
               aria-hidden="true"
             />
@@ -78,5 +78,3 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
     </div>
   );
 }
-
-

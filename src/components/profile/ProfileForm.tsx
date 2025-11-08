@@ -43,14 +43,7 @@ const flattenErrors = (error: z.ZodError<ProfileFormValues>): ProfileFormErrors 
   return errors;
 };
 
-export function ProfileForm({
-  initialValues,
-  lastModified,
-  onSave,
-  onSuccess,
-  onError,
-  saving,
-}: ProfileFormProps) {
+export function ProfileForm({ initialValues, lastModified, onSave, onSuccess, onError, saving }: ProfileFormProps) {
   const [values, setValues] = useState<ProfileFormValues>(initialValues);
   const [errors, setErrors] = useState<ProfileFormErrors>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -84,7 +77,7 @@ export function ProfileForm({
         validate(next);
       }
     },
-    [initialValues, hasAttemptedSubmit, validate],
+    [initialValues, hasAttemptedSubmit, validate]
   );
 
   const handleSubmit = useCallback(
@@ -113,7 +106,7 @@ export function ProfileForm({
         onError?.(error);
       }
     },
-    [isDirty, onError, onSave, onSuccess, validate, values],
+    [isDirty, onError, onSave, onSuccess, validate, values]
   );
 
   const canSubmit = useMemo(() => {
@@ -195,4 +188,3 @@ export function ProfileForm({
     </form>
   );
 }
-

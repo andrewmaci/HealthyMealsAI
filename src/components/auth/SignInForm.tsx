@@ -53,12 +53,14 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
       let next = previous;
 
       if (previous[field]) {
-        const { [field]: _removed, ...rest } = previous;
+        const { [field]: removed, ...rest } = previous;
+        void removed;
         next = rest;
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
       }
 
@@ -74,7 +76,8 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
         if (!previous[field]) {
           next = previous;
         } else {
-          const { [field]: _removed, ...rest } = previous;
+          const { [field]: removed, ...rest } = previous;
+          void removed;
           next = rest;
         }
       } else {
@@ -85,7 +88,8 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
       }
 
@@ -117,7 +121,8 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
           return previous;
         }
 
-        const { form: _form, ...rest } = previous;
+        const { form: formError, ...rest } = previous;
+        void formError;
         return rest;
       });
 
@@ -161,17 +166,20 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
               } | null;
 
               if (data?.details?.fieldErrors) {
-                nextFieldErrors = Object.entries(data.details.fieldErrors).reduce<FieldErrors>((accumulator, [field, fieldErrors]) => {
-                  if (!Array.isArray(fieldErrors) || fieldErrors.length === 0) {
+                nextFieldErrors = Object.entries(data.details.fieldErrors).reduce<FieldErrors>(
+                  (accumulator, [field, fieldErrors]) => {
+                    if (!Array.isArray(fieldErrors) || fieldErrors.length === 0) {
+                      return accumulator;
+                    }
+
+                    if (field === "email" || field === "password") {
+                      accumulator[field] = fieldErrors[0];
+                    }
+
                     return accumulator;
-                  }
-
-                  if (field === "email" || field === "password") {
-                    accumulator[field] = fieldErrors[0];
-                  }
-
-                  return accumulator;
-                }, {});
+                  },
+                  {}
+                );
               }
 
               message = data?.error || data?.message;
@@ -224,7 +232,7 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
         setIsSubmitting(false);
       }
     },
-    [buildValidationErrors, redirectUrl, values.email, values.password],
+    [buildValidationErrors, redirectUrl, values.email, values.password]
   );
 
   const formError = errors.form;
@@ -232,10 +240,13 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
   const footer = useMemo(
     () => (
       <p>
-        Don&apos;t have an account? <a href="/auth/signup" className="font-medium text-primary hover:underline">Sign up</a>
+        Don&apos;t have an account?{" "}
+        <a href="/auth/signup" className="font-medium text-primary hover:underline">
+          Sign up
+        </a>
       </p>
     ),
-    [],
+    []
   );
 
   return (
@@ -246,7 +257,10 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
     >
       <form className="space-y-5" onSubmit={handleSubmit} noValidate data-test-id="auth-signin-form">
         {formError ? (
-          <div className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+          <div
+            className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+            role="alert"
+          >
             {formError}
           </div>
         ) : null}
@@ -312,5 +326,3 @@ export function SignInForm({ redirectUrl = "/recipes" }: SignInFormProps) {
     </AuthFormLayout>
   );
 }
-
-

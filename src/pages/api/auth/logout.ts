@@ -30,5 +30,3 @@ export const POST: APIRoute = async ({ locals }) => {
 
   return new Response(null, { status: 204 });
 };
-
-

@@ -38,7 +38,7 @@ const isValidTimezone = (timezone: string) => {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 };
@@ -51,7 +51,7 @@ const createPreferenceArraySchema = (fieldLabel: string) =>
         .transform((value) => value.trim())
         .refine((value) => value.length > 0, {
           message: `${fieldLabel} strings cannot be empty.`,
-        }),
+        })
     )
     .max(50, `${fieldLabel} list cannot exceed 50 entries.`);
 
@@ -85,21 +85,13 @@ const hasAtMostTwoDecimalPlaces = (value: number) => Number.isInteger(Math.round
 
 const RecipeMacroInputSchema = z
   .object({
-    kcal: z
-      .number({ required_error: "Total calories (kcal) are required." })
-      .min(0, "kcal cannot be negative."),
-    protein: z
-      .number({ required_error: "Protein grams are required." })
-      .min(0, "protein cannot be negative."),
-    carbs: z
-      .number({ required_error: "Carbohydrate grams are required." })
-      .min(0, "carbs cannot be negative."),
-    fat: z
-      .number({ required_error: "Fat grams are required." })
-      .min(0, "fat cannot be negative."),
+    kcal: z.number({ required_error: "Total calories (kcal) are required." }).min(0, "kcal cannot be negative."),
+    protein: z.number({ required_error: "Protein grams are required." }).min(0, "protein cannot be negative."),
+    carbs: z.number({ required_error: "Carbohydrate grams are required." }).min(0, "carbs cannot be negative."),
+    fat: z.number({ required_error: "Fat grams are required." }).min(0, "fat cannot be negative."),
   })
   .superRefine((macros, ctx) => {
-    (Object.entries(macros) as Array<[keyof typeof macros, number]>).forEach(([key, value]) => {
+    (Object.entries(macros) as [keyof typeof macros, number][]).forEach(([key, value]) => {
       if (!hasAtMostTwoDecimalPlaces(value)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -201,12 +193,7 @@ export interface RecipeAdaptationRequestCommand {
 
 export const RecipeAdaptationRequestDtoSchema = z.object({
   goal: z
-    .enum([
-      "remove_allergens",
-      "remove_disliked_ingredients",
-      "reduce_calories",
-      "increase_protein",
-    ])
+    .enum(["remove_allergens", "remove_disliked_ingredients", "reduce_calories", "increase_protein"])
     .describe("Primary objective for the requested adaptation."),
   notes: z
     .string({ invalid_type_error: "Notes must be a string." })
@@ -263,10 +250,7 @@ export interface RecipeAdaptationAcceptCommand {
 }
 
 export const RecipeAdaptationAcceptDtoSchema = z.object({
-  logId: z
-    .string({ required_error: "logId is required." })
-    .trim()
-    .uuid({ message: "logId must be a valid UUID." }),
+  logId: z.string({ required_error: "logId is required." }).trim().uuid({ message: "logId must be a valid UUID." }),
   recipeText: RecipeCreateDtoSchema.shape.recipeText,
   macros: RecipeMacroInputSchema,
   explanation: z
@@ -361,10 +345,7 @@ const optionalIsoDateString = z.preprocess(
 
     return trimmed;
   },
-  z
-    .string()
-    .datetime({ offset: true })
-    .optional(),
+  z.string().datetime({ offset: true }).optional()
 );
 
 export const GetRecipeAdaptationHistoryQuerySchema = z

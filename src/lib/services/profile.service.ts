@@ -50,7 +50,7 @@ interface ProfileProvisionDefaults {
 export const getOrCreateProfile = async (
   supabase: SupabaseClient,
   userId: string,
-  defaults: ProfileProvisionDefaults = {},
+  defaults: ProfileProvisionDefaults = {}
 ): Promise<ProfileRow> => {
   const { data: profile, error: fetchError } = await supabase
     .from("profiles")
@@ -136,7 +136,7 @@ export const updateProfile = async (
   supabase: SupabaseClient,
   userId: string,
   data: ProfileUpdateDto,
-  ifUnmodifiedSince: string,
+  ifUnmodifiedSince: string
 ): Promise<ProfileDTO> => {
   const headerMetadata = ensureValidConcurrencyHeader(ifUnmodifiedSince);
 
@@ -198,4 +198,3 @@ export const updateProfile = async (
 
   return mapProfileRowToDTO(updatedRow);
 };
-

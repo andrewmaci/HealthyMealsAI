@@ -1,12 +1,6 @@
 import { useId } from "react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 interface ProfileCompletionPromptProps {
@@ -40,4 +34,3 @@ export function ProfileCompletionPrompt({ visible, onDismiss }: ProfileCompletio
     </Card>
   );
 }
-

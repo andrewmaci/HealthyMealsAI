@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import type { PaginationDTO } from "@/types";
 
-type PaginationProps = {
+interface PaginationProps {
   pagination: PaginationDTO;
   onPageChange: (page: number) => void;
   isLoading?: boolean;
-};
+}
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -66,4 +66,3 @@ const Pagination = ({ pagination, onPageChange, isLoading }: PaginationProps) =>
 };
 
 export default Pagination;
-

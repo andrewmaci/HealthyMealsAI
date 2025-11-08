@@ -3,14 +3,15 @@ import { cn } from "@/lib/utils";
 
 import type { FilterFormValues } from "../types";
 
-type FilterButtonProps = {
+interface FilterButtonProps {
   activeFilters: FilterFormValues;
   onOpen: () => void;
   onReset: () => void;
   className?: string;
-};
+}
 
-const countActiveFilters = (filters: FilterFormValues) => Object.values(filters).filter((value) => value !== undefined).length;
+const countActiveFilters = (filters: FilterFormValues) =>
+  Object.values(filters).filter((value) => value !== undefined).length;
 
 const FilterButton = ({ activeFilters, onOpen, onReset, className }: FilterButtonProps) => {
   const activeCount = countActiveFilters(activeFilters);
@@ -33,4 +34,3 @@ const FilterButton = ({ activeFilters, onOpen, onReset, className }: FilterButto
 };
 
 export default FilterButton;
-

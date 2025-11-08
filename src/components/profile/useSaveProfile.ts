@@ -4,9 +4,7 @@ import type { ProfileDTO, ProfileUpdateDto } from "@/types";
 
 import type { UseSaveProfileOptions, UseSaveProfileResult } from "./types";
 
-const isValidationError = (
-  error: unknown,
-): error is { details?: unknown; error?: string } => {
+const isValidationError = (error: unknown): error is { details?: unknown; error?: string } => {
   if (!error || typeof error !== "object") {
     return false;
   }
@@ -37,7 +35,7 @@ export function useSaveProfile(options: UseSaveProfileOptions): UseSaveProfileRe
           headers: {
             "content-type": "application/json",
             "if-unmodified-since": lastModifiedRef.current,
-            "accept": "application/json",
+            accept: "application/json",
           },
           body: JSON.stringify(values),
         });
@@ -92,12 +90,14 @@ export function useSaveProfile(options: UseSaveProfileOptions): UseSaveProfileRe
         setSaving(false);
       }
     },
-    [options, safeSetLastModified],
+    [options, safeSetLastModified]
   );
 
-  return useMemo(() => ({
-    save,
-    saving,
-  }), [save, saving]);
+  return useMemo(
+    () => ({
+      save,
+      saving,
+    }),
+    [save, saving]
+  );
 }
-

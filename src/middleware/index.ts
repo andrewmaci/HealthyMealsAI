@@ -2,13 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 
 import { createSupabaseServerInstance } from "../db/supabase.client";
 
-const PUBLIC_ROUTES = new Set([
-  "/auth/signin",
-  "/auth/signup",
-  "/auth/recover",
-  "/auth/reset",
-  "/auth/confirm",
-]);
+const PUBLIC_ROUTES = new Set(["/auth/signin", "/auth/signup", "/auth/recover", "/auth/reset", "/auth/confirm"]);
 
 const PUBLIC_API_ROUTES = [
   "/api/auth/signin",
@@ -20,18 +14,9 @@ const PUBLIC_API_ROUTES = [
   "/api/health",
 ];
 
-const ASSET_PREFIXES = [
-  "/_astro/",
-  "/assets/",
-  "/_image/",
-];
+const ASSET_PREFIXES = ["/_astro/", "/assets/", "/_image/"];
 
-const ASSET_FILES = new Set([
-  "/favicon.png",
-  "/favicon.ico",
-  "/manifest.webmanifest",
-  "/robots.txt",
-]);
+const ASSET_FILES = new Set(["/favicon.png", "/favicon.ico", "/manifest.webmanifest", "/robots.txt"]);
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { request, cookies, url, locals, redirect } = context;
@@ -78,15 +63,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (!locals.session && !isPublicRoute && !isPublicApiRoute) {
     if (pathname.startsWith("/api/")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: {
-            "content-type": "application/json",
-          },
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: {
+          "content-type": "application/json",
         },
-      );
+      });
     }
 
     const loginUrl = new URL("/auth/signin", url);

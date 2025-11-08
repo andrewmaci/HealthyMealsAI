@@ -6,13 +6,8 @@ import { getOrCreateProfile, ProfileServiceError } from "../../../lib/services/p
 export const prerender = false;
 
 const SignInRequestSchema = z.object({
-  email: z
-    .string({ required_error: "Email is required." })
-    .trim()
-    .email("Invalid email or password format."),
-  password: z
-    .string({ required_error: "Password is required." })
-    .min(6, "Password must be at least 6 characters."),
+  email: z.string({ required_error: "Email is required." }).trim().email("Invalid email or password format."),
+  password: z.string({ required_error: "Password is required." }).min(6, "Password must be at least 6 characters."),
 });
 
 const buildJsonResponse = (body: unknown, status: number) =>
@@ -50,12 +45,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return buildJsonResponse(
       {
         error: "Invalid JSON payload.",
       },
-      400,
+      400
     );
   }
 
@@ -71,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           fieldErrors,
         },
       },
-      400,
+      400
     );
   }
 
@@ -89,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       {
         error: message,
       },
-      status,
+      status
     );
   }
 
@@ -112,4 +107,3 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return buildJsonResponse({ success: true }, 200);
 };
-

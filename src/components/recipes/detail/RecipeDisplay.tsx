@@ -60,5 +60,3 @@ const RecipeDisplay = ({ recipe }: RecipeDisplayProps) => {
 };
 
 export default RecipeDisplay;
-
-

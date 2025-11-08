@@ -4,10 +4,7 @@ import { z } from "zod";
 export const prerender = false;
 
 const ResetPasswordRequestSchema = z.object({
-  token: z
-    .string({ required_error: "Token is required." })
-    .trim()
-    .min(1, "Token is required."),
+  token: z.string({ required_error: "Token is required." }).trim().min(1, "Token is required."),
   password: z
     .string({ required_error: "Password is required." })
     .min(8, "Password must be at least 8 characters.")
@@ -49,7 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return buildJsonResponse({ error: "Invalid JSON payload." }, 400);
   }
 
@@ -65,13 +62,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           fieldErrors,
         },
       },
-      400,
+      400
     );
   }
 
-  const {
-    password,
-  } = parseResult.data;
+  const { password } = parseResult.data;
 
   const {
     data: { session },
@@ -91,5 +86,3 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return buildJsonResponse({ success: true }, 200);
 };
-
-

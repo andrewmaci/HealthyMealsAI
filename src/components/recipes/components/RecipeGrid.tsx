@@ -3,11 +3,11 @@ import RecipeCardSkeleton from "./RecipeCardSkeleton";
 
 import type { RecipeListItemVM } from "../types";
 
-type RecipeGridProps = {
+interface RecipeGridProps {
   items: RecipeListItemVM[];
   isLoading: boolean;
   skeletonCount?: number;
-};
+}
 
 const RecipeGrid = ({ items, isLoading, skeletonCount = 6 }: RecipeGridProps) => {
   if (isLoading && items.length === 0) {
@@ -39,4 +39,3 @@ const RecipeGrid = ({ items, isLoading, skeletonCount = 6 }: RecipeGridProps) =>
 };
 
 export default RecipeGrid;
-

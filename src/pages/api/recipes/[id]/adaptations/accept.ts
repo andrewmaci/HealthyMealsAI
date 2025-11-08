@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         error: "Invalid request body.",
         details: parsedBody.error.flatten(),
       },
-      400,
+      400
     );
   }
 

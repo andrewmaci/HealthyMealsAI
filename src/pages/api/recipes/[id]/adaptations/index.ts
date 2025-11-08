@@ -2,11 +2,12 @@ import type { APIRoute } from "astro";
 
 import { z } from "zod";
 
-import { AdaptationServiceError, getAdaptationHistory, proposeAdaptation } from "../../../../../lib/services/adaptation.service";
 import {
-  GetRecipeAdaptationHistoryQuerySchema,
-  RecipeAdaptationRequestDtoSchema,
-} from "../../../../../types";
+  AdaptationServiceError,
+  getAdaptationHistory,
+  proposeAdaptation,
+} from "../../../../../lib/services/adaptation.service";
+import { GetRecipeAdaptationHistoryQuerySchema, RecipeAdaptationRequestDtoSchema } from "../../../../../types";
 import type { RecipeAdaptationRequestDto } from "../../../../../types";
 
 export const prerender = false;
@@ -107,7 +108,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         error: "Invalid request body.",
         details: parsedBody.error.flatten(),
       },
-      400,
+      400
     );
   }
 
@@ -171,11 +172,14 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
             stack: error.stack,
           });
 
-          return buildJsonResponse({
-            error: "Failed to process adaptation request.",
-            details: error.message,
-            errorCode: error.code,
-          }, 500);
+          return buildJsonResponse(
+            {
+              error: "Failed to process adaptation request.",
+              details: error.message,
+              errorCode: error.code,
+            },
+            500
+          );
       }
     }
 
@@ -193,9 +197,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         error: "Failed to process adaptation request.",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      500,
+      500
     );
   }
 };
-
-

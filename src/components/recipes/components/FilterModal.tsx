@@ -23,13 +23,13 @@ type FilterFieldKey = keyof FilterFormValues;
 
 type ValidationErrors = Partial<Record<FilterFieldKey, string>>;
 
-type FilterModalProps = {
+interface FilterModalProps {
   open: boolean;
   initialValues: FilterFormValues;
   onClose: () => void;
   onApply: (values: FilterFormValues) => void;
   onReset: () => void;
-};
+}
 
 const validateFilters = (values: FilterFormValues): ValidationErrors => {
   const errors: ValidationErrors = {};
@@ -120,7 +120,9 @@ const FilterModal = ({ open, initialValues, onClose, onApply, onReset }: FilterM
                 onChange={(event) => handleChange("minKcal", event.target.value)}
                 className={cn(
                   "h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
-                  errors.minKcal ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20" : undefined,
+                  errors.minKcal
+                    ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+                    : undefined
                 )}
                 aria-invalid={Boolean(errors.minKcal)}
                 aria-describedby={errors.minKcal ? "filter-min-kcal-error" : undefined}
@@ -142,7 +144,9 @@ const FilterModal = ({ open, initialValues, onClose, onApply, onReset }: FilterM
                 onChange={(event) => handleChange("maxKcal", event.target.value)}
                 className={cn(
                   "h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
-                  errors.minKcal ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20" : undefined,
+                  errors.minKcal
+                    ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+                    : undefined
                 )}
                 aria-invalid={Boolean(errors.minKcal)}
                 aria-describedby={errors.minKcal ? "filter-min-kcal-error" : undefined}
@@ -159,7 +163,9 @@ const FilterModal = ({ open, initialValues, onClose, onApply, onReset }: FilterM
                 onChange={(event) => handleChange("minProtein", event.target.value)}
                 className={cn(
                   "h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
-                  errors.minProtein ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20" : undefined,
+                  errors.minProtein
+                    ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+                    : undefined
                 )}
                 aria-invalid={Boolean(errors.minProtein)}
                 aria-describedby={errors.minProtein ? "filter-min-protein-error" : undefined}
@@ -181,7 +187,9 @@ const FilterModal = ({ open, initialValues, onClose, onApply, onReset }: FilterM
                 onChange={(event) => handleChange("maxProtein", event.target.value)}
                 className={cn(
                   "h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
-                  errors.minProtein ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20" : undefined,
+                  errors.minProtein
+                    ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20"
+                    : undefined
                 )}
                 aria-invalid={Boolean(errors.minProtein)}
                 aria-describedby={errors.minProtein ? "filter-min-protein-error" : undefined}
@@ -209,4 +217,3 @@ const FilterModal = ({ open, initialValues, onClose, onApply, onReset }: FilterM
 };
 
 export default FilterModal;
-

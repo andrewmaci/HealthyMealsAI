@@ -52,7 +52,7 @@ export function useProfile(): UseProfileResult {
       const response = await fetch("/api/profile", {
         method: "GET",
         headers: {
-          "accept": "application/json",
+          accept: "application/json",
         },
         signal: controller.signal,
       });
@@ -124,12 +124,14 @@ export function useProfile(): UseProfileResult {
     };
   }, [fetchProfile]);
 
-  return useMemo(() => ({
-    status: state.status,
-    data: state.data,
-    lastModified: state.lastModified,
-    error: state.error,
-    refetch,
-  }), [refetch, state.data, state.error, state.lastModified, state.status]);
+  return useMemo(
+    () => ({
+      status: state.status,
+      data: state.data,
+      lastModified: state.lastModified,
+      error: state.error,
+      refetch,
+    }),
+    [refetch, state.data, state.error, state.lastModified, state.status]
+  );
 }
-

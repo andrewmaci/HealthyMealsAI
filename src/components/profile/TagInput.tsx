@@ -81,13 +81,15 @@ export function TagInput({
     <div className="space-y-2">
       <label htmlFor={inputId} className="flex items-center justify-between text-sm font-medium text-foreground">
         {label}
-        <span className="text-xs text-muted-foreground">{value.length}/{max}</span>
+        <span className="text-xs text-muted-foreground">
+          {value.length}/{max}
+        </span>
       </label>
       <div
         className={cn(
           "flex flex-wrap gap-2 rounded-md border bg-background px-3 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary",
           disabled && "bg-muted/50 text-muted-foreground",
-          error && "border-destructive",
+          error && "border-destructive"
         )}
       >
         {value.map((tag, index) => (
@@ -95,7 +97,7 @@ export function TagInput({
             key={tag}
             className={cn(
               "group inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm text-primary",
-              focusedChipIndex === index && "ring-2 ring-primary",
+              focusedChipIndex === index && "ring-2 ring-primary"
             )}
             role="button"
             tabIndex={-1}
@@ -110,8 +112,7 @@ export function TagInput({
               onClick={() => removeAt(index)}
               disabled={disabled}
             >
-              <span className="sr-only">Remove {tag}</span>
-              ×
+              <span className="sr-only">Remove {tag}</span>×
             </Button>
           </span>
         ))}
@@ -167,4 +168,3 @@ export function TagInput({
     </div>
   );
 }
-

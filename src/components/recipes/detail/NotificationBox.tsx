@@ -37,5 +37,3 @@ const NotificationBox = ({ explanation, timezone, quotaError }: NotificationBoxP
 };
 
 export default NotificationBox;
-
-

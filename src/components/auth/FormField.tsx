@@ -91,7 +91,7 @@ export function FormField({
             "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             error ? "border-destructive focus-visible:ring-destructive/80" : "border-input focus-visible:ring-ring/60",
             disabled ? "cursor-not-allowed opacity-70" : undefined,
-            isPasswordField ? "pr-10" : undefined,
+            isPasswordField ? "pr-10" : undefined
           )}
         />
         {isPasswordField ? (
@@ -110,5 +110,3 @@ export function FormField({
     </div>
   );
 }
-
-

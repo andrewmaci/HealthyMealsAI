@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 
 import type { RecipeListItemVM } from "../types";
 
-type RecipeCardProps = {
+interface RecipeCardProps {
   item: RecipeListItemVM;
   className?: string;
-};
+}
 
 const RecipeCard = ({ item, className }: RecipeCardProps) => (
   <Card className={cn("h-full", className)}>
@@ -41,4 +41,3 @@ const RecipeCard = ({ item, className }: RecipeCardProps) => (
 );
 
 export default RecipeCard;
-

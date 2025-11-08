@@ -16,5 +16,3 @@ const redirectUrl = Astro.url.searchParams.get("redirect") ?? "/recipes";
 <PublicLayout title="Create Account | HealthyMealsAI">
   <SignUpForm client:load redirectUrl={redirectUrl} />
 </PublicLayout>
-
-

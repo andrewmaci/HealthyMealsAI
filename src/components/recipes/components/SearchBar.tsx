@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils";
 
 import { useDebouncedValue } from "../query";
 
-type SearchBarProps = {
+interface SearchBarProps {
   value?: string;
   onChange: (value?: string) => void;
   isLoading?: boolean;
   placeholder?: string;
   className?: string;
-};
+}
 
 const normalizeSearch = (value: string) => {
   const trimmed = value.trim();
@@ -84,4 +84,3 @@ const SearchBar = ({ value, onChange, isLoading, placeholder = "Search recipes",
 };
 
 export default SearchBar;
-
