@@ -2,12 +2,12 @@ import { cn } from "@/lib/utils";
 
 import type { RecipeSortBy, SortOrder } from "../types";
 
-type SortControlsProps = {
+interface SortControlsProps {
   sortBy: RecipeSortBy;
   sortOrder: SortOrder;
   onChange: (next: { sortBy: RecipeSortBy; sortOrder: SortOrder }) => void;
   className?: string;
-};
+}
 
 const SortControls = ({ sortBy, sortOrder, onChange, className }: SortControlsProps) => (
   <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -50,4 +50,3 @@ const SortControls = ({ sortBy, sortOrder, onChange, className }: SortControlsPr
 );
 
 export default SortControls;
-

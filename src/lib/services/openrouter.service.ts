@@ -1,6 +1,6 @@
 /**
  * OpenRouter Service
- * 
+ *
  * Manages all interactions with the OpenRouter API for LLM-based operations.
  * Provides type-safe interfaces for chat completions with support for:
  * - Text responses
@@ -17,7 +17,7 @@
  * Represents a chat message with role and content
  */
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
@@ -78,7 +78,7 @@ export interface ModelParameters {
  * JSON Schema definition for structured responses
  */
 export interface JsonSchema {
-  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+  type: "object" | "array" | "string" | "number" | "boolean" | "null";
   properties?: Record<string, JsonSchema>;
   items?: JsonSchema;
   required?: string[];
@@ -92,7 +92,7 @@ export interface JsonSchema {
  * Response format configuration for structured JSON output
  */
 export interface ResponseFormat {
-  type: 'json_schema';
+  type: "json_schema";
   json_schema: {
     name: string;
     strict: boolean;
@@ -146,13 +146,13 @@ export interface TokenUsage {
 export interface ChatCompletionResponse {
   id: string;
   model: string;
-  choices: Array<{
+  choices: {
     message: {
-      role: 'assistant';
+      role: "assistant";
       content: string;
     };
-    finish_reason: 'stop' | 'length' | 'content_filter' | 'tool_calls' | null;
-  }>;
+    finish_reason: "stop" | "length" | "content_filter" | "tool_calls" | null;
+  }[];
   usage?: TokenUsage;
   created: number;
 }
@@ -236,18 +236,18 @@ interface RetryOptions {
  * Error codes for OpenRouter service operations
  */
 export type OpenRouterErrorCode =
-  | 'configuration_error'        // Missing or invalid configuration
-  | 'network_error'              // Network/connection issues
-  | 'timeout_error'              // Request timeout
-  | 'authentication_error'       // Invalid API key (401)
-  | 'rate_limit_error'           // Rate limit exceeded (429)
-  | 'quota_exceeded_error'       // Account quota exceeded (402)
-  | 'invalid_request_error'      // Malformed request (400)
-  | 'model_not_found_error'      // Model doesn't exist (404)
-  | 'server_error'               // OpenRouter server error (5xx)
-  | 'json_parse_error'           // Failed to parse JSON response
-  | 'schema_validation_error'    // Response doesn't match schema
-  | 'unknown_error';             // Unexpected error
+  | "configuration_error" // Missing or invalid configuration
+  | "network_error" // Network/connection issues
+  | "timeout_error" // Request timeout
+  | "authentication_error" // Invalid API key (401)
+  | "rate_limit_error" // Rate limit exceeded (429)
+  | "quota_exceeded_error" // Account quota exceeded (402)
+  | "invalid_request_error" // Malformed request (400)
+  | "model_not_found_error" // Model doesn't exist (404)
+  | "server_error" // OpenRouter server error (5xx)
+  | "json_parse_error" // Failed to parse JSON response
+  | "schema_validation_error" // Response doesn't match schema
+  | "unknown_error"; // Unexpected error
 
 /**
  * Options for creating OpenRouter service errors
@@ -270,11 +270,11 @@ export class OpenRouterServiceError extends Error {
 
   constructor(options: OpenRouterErrorOptions) {
     super(options.message);
-    this.name = 'OpenRouterServiceError';
+    this.name = "OpenRouterServiceError";
     this.code = options.code;
     this.statusCode = options.statusCode;
     this.retryable = options.retryable ?? false;
-    
+
     if (options.cause) {
       this.cause = options.cause;
     }
@@ -287,22 +287,22 @@ export class OpenRouterServiceError extends Error {
 const mapHttpStatusToErrorCode = (status: number): OpenRouterErrorCode => {
   switch (status) {
     case 400:
-      return 'invalid_request_error';
+      return "invalid_request_error";
     case 401:
-      return 'authentication_error';
+      return "authentication_error";
     case 402:
-      return 'quota_exceeded_error';
+      return "quota_exceeded_error";
     case 404:
-      return 'model_not_found_error';
+      return "model_not_found_error";
     case 429:
-      return 'rate_limit_error';
+      return "rate_limit_error";
     case 500:
     case 502:
     case 503:
     case 504:
-      return 'server_error';
+      return "server_error";
     default:
-      return 'unknown_error';
+      return "unknown_error";
   }
 };
 
@@ -310,7 +310,7 @@ const mapHttpStatusToErrorCode = (status: number): OpenRouterErrorCode => {
  * Determines if an error is retryable based on error code
  */
 const isRetryableError = (code: OpenRouterErrorCode): boolean => {
-  return ['network_error', 'timeout_error', 'rate_limit_error', 'server_error'].includes(code);
+  return ["network_error", "timeout_error", "rate_limit_error", "server_error"].includes(code);
 };
 
 // ============================================================================
@@ -323,33 +323,33 @@ const isRetryableError = (code: OpenRouterErrorCode): boolean => {
  */
 const getOpenRouterConfig = (): OpenRouterConfig => {
   const apiKey = import.meta.env.OPENROUTER_API_KEY;
-  
-  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+
+  if (!apiKey || typeof apiKey !== "string" || apiKey.trim().length === 0) {
     throw new OpenRouterServiceError({
-      code: 'configuration_error',
-      message: 'OPENROUTER_API_KEY environment variable is required',
+      code: "configuration_error",
+      message: "OPENROUTER_API_KEY environment variable is required",
     });
   }
 
-  const baseUrl = import.meta.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
-  
-  if (!baseUrl.startsWith('https://')) {
+  const baseUrl = import.meta.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
+
+  if (!baseUrl.startsWith("https://")) {
     throw new OpenRouterServiceError({
-      code: 'configuration_error',
-      message: 'OpenRouter base URL must use HTTPS',
+      code: "configuration_error",
+      message: "OpenRouter base URL must use HTTPS",
     });
   }
 
   // Default to a model that supports structured JSON output
   // minimax/minimax-m2:free doesn't support json_schema mode
-  const defaultModel = import.meta.env.OPENROUTER_DEFAULT_MODEL || 'google/gemini-2.0-flash-exp:free';
+  const defaultModel = import.meta.env.OPENROUTER_DEFAULT_MODEL || "google/gemini-2.0-flash-exp:free";
 
   return {
     apiKey: apiKey.trim(),
     baseUrl,
     defaultModel,
-    requestTimeoutMs: parseInt(import.meta.env.OPENROUTER_REQUEST_TIMEOUT_MS || '60000', 10),
-    maxRetries: parseInt(import.meta.env.OPENROUTER_MAX_RETRIES || '3', 10),
+    requestTimeoutMs: parseInt(import.meta.env.OPENROUTER_REQUEST_TIMEOUT_MS || "60000", 10),
+    maxRetries: parseInt(import.meta.env.OPENROUTER_MAX_RETRIES || "3", 10),
   };
 };
 
@@ -363,10 +363,10 @@ const getOpenRouterConfig = (): OpenRouterConfig => {
 const calculateRetryDelay = (attempt: number, baseDelayMs: number, maxDelayMs: number): number => {
   // Exponential backoff: baseDelay * 2^attempt
   const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
-  
+
   // Add jitter (random factor between 0.5 and 1.5)
   const jitter = 0.5 + Math.random();
-  
+
   // Cap at maxDelay
   return Math.min(exponentialDelay * jitter, maxDelayMs);
 };
@@ -374,12 +374,9 @@ const calculateRetryDelay = (attempt: number, baseDelayMs: number, maxDelayMs: n
 /**
  * Executes a function with retry logic
  */
-const withRetry = async <T>(
-  fn: () => Promise<T>,
-  options: RetryOptions,
-): Promise<T> => {
+const withRetry = async <T>(fn: () => Promise<T>, options: RetryOptions): Promise<T> => {
   let lastError: OpenRouterServiceError | undefined;
-  
+
   for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
     try {
       return await fn();
@@ -387,28 +384,28 @@ const withRetry = async <T>(
       if (!(error instanceof OpenRouterServiceError)) {
         throw error;
       }
-      
+
       lastError = error;
-      
+
       // Don't retry if error is not retryable or we've exhausted retries
       if (!options.shouldRetry(error) || attempt === options.maxRetries) {
         throw error;
       }
-      
+
       // Calculate and wait for retry delay
       const delay = calculateRetryDelay(attempt, options.baseDelayMs, options.maxDelayMs);
-      
-      console.warn('OpenRouter request failed, retrying...', {
+
+      console.warn("OpenRouter request failed, retrying...", {
         attempt: attempt + 1,
         maxRetries: options.maxRetries,
         errorCode: error.code,
         delayMs: delay,
       });
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError;
 };
 
@@ -417,8 +414,8 @@ const withRetry = async <T>(
  */
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   maxRetries: 3,
-  baseDelayMs: 1000,      // 1 second
-  maxDelayMs: 30000,      // 30 seconds
+  baseDelayMs: 1000, // 1 second
+  maxDelayMs: 30000, // 30 seconds
   shouldRetry: (error) => error.retryable,
 };
 
@@ -432,24 +429,13 @@ const DEFAULT_RETRY_OPTIONS: RetryOptions = {
 const MAX_MESSAGE_LENGTH = 10000;
 
 /**
- * Sanitizes user input by removing control characters and trimming whitespace
- */
-const sanitizeUserInput = (input: string): string => {
-  // Remove control characters
-  const cleaned = input.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-  
-  // Trim whitespace
-  return cleaned.trim();
-};
-
-/**
  * Validates message length
  * @throws {OpenRouterServiceError} If message exceeds maximum length
  */
 const validateMessageLength = (content: string): void => {
   if (content.length > MAX_MESSAGE_LENGTH) {
     throw new OpenRouterServiceError({
-      code: 'invalid_request_error',
+      code: "invalid_request_error",
       message: `Message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters`,
       retryable: false,
     });
@@ -463,24 +449,24 @@ const validateMessageLength = (content: string): void => {
 const validateMessages = (messages: ChatMessage[]): void => {
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new OpenRouterServiceError({
-      code: 'invalid_request_error',
-      message: 'Messages array cannot be empty',
+      code: "invalid_request_error",
+      message: "Messages array cannot be empty",
       retryable: false,
     });
   }
 
   for (const [index, message] of messages.entries()) {
-    if (!message.role || !['system', 'user', 'assistant'].includes(message.role)) {
+    if (!message.role || !["system", "user", "assistant"].includes(message.role)) {
       throw new OpenRouterServiceError({
-        code: 'invalid_request_error',
+        code: "invalid_request_error",
         message: `Invalid role at message index ${index}: ${message.role}`,
         retryable: false,
       });
     }
 
-    if (typeof message.content !== 'string' || message.content.trim().length === 0) {
+    if (typeof message.content !== "string" || message.content.trim().length === 0) {
       throw new OpenRouterServiceError({
-        code: 'invalid_request_error',
+        code: "invalid_request_error",
         message: `Empty or invalid content at message index ${index}`,
         retryable: false,
       });
@@ -521,19 +507,19 @@ const buildRequestPayload = (request: ChatCompletionRequest): Record<string, unk
 const executeRequest = async (
   endpoint: string,
   payload: Record<string, unknown>,
-  config: OpenRouterConfig,
+  config: OpenRouterConfig
 ): Promise<Response> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.requestTimeoutMs);
 
   try {
     const response = await fetch(`${config.baseUrl}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-        'HTTP-Referer': 'https://healthymeals.ai',  // Optional: your site URL
-        'X-Title': 'HealthyMealsAI',                 // Optional: your app name
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+        "HTTP-Referer": "https://healthymeals.ai", // Optional: your site URL
+        "X-Title": "HealthyMealsAI", // Optional: your app name
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -543,10 +529,10 @@ const executeRequest = async (
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    
-    if (error instanceof Error && error.name === 'AbortError') {
+
+    if (error instanceof Error && error.name === "AbortError") {
       throw new OpenRouterServiceError({
-        code: 'timeout_error',
+        code: "timeout_error",
         message: `Request timeout after ${config.requestTimeoutMs}ms`,
         cause: error,
         retryable: true,
@@ -554,8 +540,8 @@ const executeRequest = async (
     }
 
     throw new OpenRouterServiceError({
-      code: 'network_error',
-      message: 'Network request failed',
+      code: "network_error",
+      message: "Network request failed",
       cause: error,
       retryable: true,
     });
@@ -575,7 +561,7 @@ const handleErrorResponse = async (response: Response): Promise<never> => {
 
   try {
     errorDetails = await response.json();
-    if (typeof errorDetails === 'object' && errorDetails !== null && 'error' in errorDetails) {
+    if (typeof errorDetails === "object" && errorDetails !== null && "error" in errorDetails) {
       const apiError = errorDetails as { error: { message?: string } };
       if (apiError.error?.message) {
         errorMessage = apiError.error.message;
@@ -600,11 +586,11 @@ const handleErrorResponse = async (response: Response): Promise<never> => {
  */
 const parseChatResponse = (apiResponse: ChatCompletionResponse): TextChatResponse => {
   const choice = apiResponse.choices[0];
-  
+
   if (!choice || !choice.message) {
     throw new OpenRouterServiceError({
-      code: 'json_parse_error',
-      message: 'Invalid response structure from OpenRouter',
+      code: "json_parse_error",
+      message: "Invalid response structure from OpenRouter",
       retryable: false,
     });
   }
@@ -623,8 +609,8 @@ const parseChatResponse = (apiResponse: ChatCompletionResponse): TextChatRespons
  * @throws {Error} If validation fails
  */
 const validateResponseAgainstSchema = (data: unknown, schema: JsonSchema): void => {
-  if (schema.type === 'object') {
-    if (typeof data !== 'object' || data === null) {
+  if (schema.type === "object") {
+    if (typeof data !== "object" || data === null) {
       throw new Error(`Expected object, got ${typeof data}`);
     }
 
@@ -647,7 +633,7 @@ const validateResponseAgainstSchema = (data: unknown, schema: JsonSchema): void 
         }
       }
     }
-  } else if (schema.type === 'array') {
+  } else if (schema.type === "array") {
     if (!Array.isArray(data)) {
       throw new Error(`Expected array, got ${typeof data}`);
     }
@@ -657,16 +643,16 @@ const validateResponseAgainstSchema = (data: unknown, schema: JsonSchema): void 
         validateResponseAgainstSchema(item, schema.items);
       }
     }
-  } else if (schema.type === 'string') {
-    if (typeof data !== 'string') {
+  } else if (schema.type === "string") {
+    if (typeof data !== "string") {
       throw new Error(`Expected string, got ${typeof data}`);
     }
-  } else if (schema.type === 'number') {
-    if (typeof data !== 'number') {
+  } else if (schema.type === "number") {
+    if (typeof data !== "number") {
       throw new Error(`Expected number, got ${typeof data}`);
     }
-  } else if (schema.type === 'boolean') {
-    if (typeof data !== 'boolean') {
+  } else if (schema.type === "boolean") {
+    if (typeof data !== "boolean") {
       throw new Error(`Expected boolean, got ${typeof data}`);
     }
   }
@@ -679,25 +665,25 @@ const validateResponseAgainstSchema = (data: unknown, schema: JsonSchema): void 
  */
 const parseStructuredResponse = <T>(
   apiResponse: ChatCompletionResponse,
-  expectedSchema: JsonSchema,
+  expectedSchema: JsonSchema
 ): StructuredChatResponse<T> => {
   const choice = apiResponse.choices[0];
-  
+
   if (!choice || !choice.message) {
-    console.error('Invalid API response structure', {
+    console.error("Invalid API response structure", {
       hasChoices: !!apiResponse.choices,
       choicesLength: apiResponse.choices?.length,
       apiResponse,
     });
     throw new OpenRouterServiceError({
-      code: 'json_parse_error',
-      message: 'Invalid response structure from OpenRouter',
+      code: "json_parse_error",
+      message: "Invalid response structure from OpenRouter",
       retryable: false,
     });
   }
 
   const messageContent = choice.message.content;
-  console.log('OpenRouter message content received', {
+  console.log("OpenRouter message content received", {
     contentLength: messageContent?.length,
     contentPreview: messageContent?.substring(0, 200),
     finishReason: choice.finish_reason,
@@ -705,18 +691,18 @@ const parseStructuredResponse = <T>(
   });
 
   let parsedData: T;
-  
+
   try {
     parsedData = JSON.parse(messageContent) as T;
   } catch (error) {
-    console.error('Failed to parse OpenRouter response as JSON', {
+    console.error("Failed to parse OpenRouter response as JSON", {
       contentLength: messageContent?.length,
       content: messageContent,
       parseError: error instanceof Error ? error.message : String(error),
     });
     throw new OpenRouterServiceError({
-      code: 'json_parse_error',
-      message: 'Failed to parse JSON response',
+      code: "json_parse_error",
+      message: "Failed to parse JSON response",
       cause: error,
       retryable: false,
     });
@@ -727,8 +713,8 @@ const parseStructuredResponse = <T>(
     validateResponseAgainstSchema(parsedData, expectedSchema);
   } catch (error) {
     throw new OpenRouterServiceError({
-      code: 'schema_validation_error',
-      message: 'Response does not match expected schema',
+      code: "schema_validation_error",
+      message: "Response does not match expected schema",
       cause: error,
       retryable: false,
     });
@@ -748,42 +734,42 @@ const parseStructuredResponse = <T>(
 
 /**
  * Creates a system message
- * 
+ *
  * @param content - System message content
  * @returns ChatMessage with role 'system'
- * 
+ *
  * @example
  * ```typescript
  * const systemMsg = buildSystemMessage('You are a recipe expert.');
  * ```
  */
 export const buildSystemMessage = (content: string): ChatMessage => ({
-  role: 'system',
+  role: "system",
   content,
 });
 
 /**
  * Creates a user message
- * 
+ *
  * @param content - User message content
  * @returns ChatMessage with role 'user'
- * 
+ *
  * @example
  * ```typescript
  * const userMsg = buildUserMessage('Create a healthy recipe.');
  * ```
  */
 export const buildUserMessage = (content: string): ChatMessage => ({
-  role: 'user',
+  role: "user",
   content,
 });
 
 /**
  * Validates a JSON schema for correctness
- * 
+ *
  * @param schema - JSON schema to validate
  * @throws OpenRouterServiceError if schema is invalid
- * 
+ *
  * @example
  * ```typescript
  * validateJsonSchema({
@@ -797,17 +783,17 @@ export const buildUserMessage = (content: string): ChatMessage => ({
 export const validateJsonSchema = (schema: JsonSchema): void => {
   if (!schema.type) {
     throw new OpenRouterServiceError({
-      code: 'invalid_request_error',
-      message: 'JSON schema must have a type property',
+      code: "invalid_request_error",
+      message: "JSON schema must have a type property",
       retryable: false,
     });
   }
 
-  if (schema.type === 'object') {
+  if (schema.type === "object") {
     if (!schema.properties || Object.keys(schema.properties).length === 0) {
       throw new OpenRouterServiceError({
-        code: 'invalid_request_error',
-        message: 'Object schema must define properties',
+        code: "invalid_request_error",
+        message: "Object schema must define properties",
         retryable: false,
       });
     }
@@ -820,13 +806,13 @@ export const validateJsonSchema = (schema: JsonSchema): void => {
 
 /**
  * Creates a chat completion request and returns text response
- * 
+ *
  * @param messages - Array of chat messages
  * @param options - Optional request configuration
  * @returns Promise resolving to text response
- * 
+ *
  * @throws {OpenRouterServiceError} On configuration, validation, network, or API errors
- * 
+ *
  * @example
  * ```typescript
  * const response = await createChatCompletion([
@@ -844,7 +830,7 @@ export const createChatCompletion = async (
   options?: {
     model?: string;
     parameters?: ModelParameters;
-  },
+  }
 ): Promise<TextChatResponse> => {
   const config = getOpenRouterConfig();
   const model = options?.model || config.defaultModel;
@@ -864,11 +850,11 @@ export const createChatCompletion = async (
 
   // Execute with retry logic
   const startTime = Date.now();
-  
+
   const response = await withRetry(
     async () => {
-      const httpResponse = await executeRequest('/chat/completions', payload, config);
-      
+      const httpResponse = await executeRequest("/chat/completions", payload, config);
+
       if (!httpResponse.ok) {
         await handleErrorResponse(httpResponse);
       }
@@ -878,8 +864,8 @@ export const createChatCompletion = async (
         apiResponse = await httpResponse.json();
       } catch (error) {
         throw new OpenRouterServiceError({
-          code: 'json_parse_error',
-          message: 'Failed to parse API response',
+          code: "json_parse_error",
+          message: "Failed to parse API response",
           cause: error,
           retryable: false,
         });
@@ -890,12 +876,12 @@ export const createChatCompletion = async (
     {
       ...DEFAULT_RETRY_OPTIONS,
       maxRetries: config.maxRetries,
-    },
+    }
   );
 
   const durationMs = Date.now() - startTime;
-  
-  console.log('OpenRouter chat completion', {
+
+  console.log("OpenRouter chat completion", {
     model,
     messageCount: messages.length,
     tokensUsed: response.usage?.total_tokens,
@@ -907,14 +893,14 @@ export const createChatCompletion = async (
 
 /**
  * Creates a chat completion with structured JSON response
- * 
+ *
  * @param messages - Array of chat messages
  * @param responseFormat - JSON schema definition for response
  * @param options - Optional request configuration
  * @returns Promise resolving to structured data
- * 
+ *
  * @throws {OpenRouterServiceError} On configuration, validation, network, or API errors
- * 
+ *
  * @example
  * ```typescript
  * interface Recipe {
@@ -922,7 +908,7 @@ export const createChatCompletion = async (
  *   ingredients: string[];
  *   instructions: string[];
  * }
- * 
+ *
  * const response = await createStructuredChatCompletion<Recipe>(
  *   [
  *     { role: 'system', content: 'You generate recipes.' },
@@ -955,7 +941,7 @@ export const createStructuredChatCompletion = async <T = unknown>(
   options?: {
     model?: string;
     parameters?: ModelParameters;
-  },
+  }
 ): Promise<StructuredChatResponse<T>> => {
   const config = getOpenRouterConfig();
   const model = options?.model || config.defaultModel;
@@ -977,12 +963,12 @@ export const createStructuredChatCompletion = async <T = unknown>(
 
   // Execute with retry logic
   const startTime = Date.now();
-  
+
   const response = await withRetry(
     async () => {
-      const httpResponse = await executeRequest('/chat/completions', payload, config);
-      
-      console.log('OpenRouter HTTP response received', {
+      const httpResponse = await executeRequest("/chat/completions", payload, config);
+
+      console.log("OpenRouter HTTP response received", {
         status: httpResponse.status,
         statusText: httpResponse.statusText,
         ok: httpResponse.ok,
@@ -995,19 +981,19 @@ export const createStructuredChatCompletion = async <T = unknown>(
       let apiResponse: ChatCompletionResponse;
       try {
         apiResponse = await httpResponse.json();
-        console.log('OpenRouter API response parsed', {
+        console.log("OpenRouter API response parsed", {
           hasChoices: !!apiResponse.choices,
           choicesCount: apiResponse.choices?.length,
           model: apiResponse.model,
           id: apiResponse.id,
         });
       } catch (error) {
-        console.error('Failed to parse OpenRouter HTTP response', {
+        console.error("Failed to parse OpenRouter HTTP response", {
           error: error instanceof Error ? error.message : String(error),
         });
         throw new OpenRouterServiceError({
-          code: 'json_parse_error',
-          message: 'Failed to parse API response',
+          code: "json_parse_error",
+          message: "Failed to parse API response",
           cause: error,
           retryable: false,
         });
@@ -1018,12 +1004,12 @@ export const createStructuredChatCompletion = async <T = unknown>(
     {
       ...DEFAULT_RETRY_OPTIONS,
       maxRetries: config.maxRetries,
-    },
+    }
   );
 
   const durationMs = Date.now() - startTime;
-  
-  console.log('OpenRouter structured completion', {
+
+  console.log("OpenRouter structured completion", {
     model,
     schemaName: responseFormat.json_schema.name,
     messageCount: messages.length,
@@ -1033,4 +1019,3 @@ export const createStructuredChatCompletion = async <T = unknown>(
 
   return response;
 };
-

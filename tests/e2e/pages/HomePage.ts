@@ -1,5 +1,5 @@
-import { Page, Locator } from '@playwright/test';
-import { BasePage } from './BasePage';
+import { Page, Locator } from "@playwright/test";
+import { BasePage } from "./BasePage";
 
 /**
  * Page Object Model for the Home Page
@@ -11,14 +11,14 @@ export class HomePage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.heading = page.getByRole('heading', { level: 1 });
+    this.heading = page.getByRole("heading", { level: 1 });
   }
 
   /**
    * Navigate to the home page
    */
   async goto() {
-    await super.goto('/');
+    await super.goto("/");
     await this.waitForLoad();
   }
 
@@ -36,4 +36,3 @@ export class HomePage extends BasePage {
     return await this.heading.isVisible();
   }
 }
-

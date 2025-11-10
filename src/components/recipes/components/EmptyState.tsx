@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 
-type EmptyStateProps = {
+interface EmptyStateProps {
   ctaHref?: string;
-};
+}
 
 const EmptyState = ({ ctaHref = "/recipes/new" }: EmptyStateProps) => (
   <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-border p-10 text-center">
@@ -17,4 +17,3 @@ const EmptyState = ({ ctaHref = "/recipes/new" }: EmptyStateProps) => (
 );
 
 export default EmptyState;
-

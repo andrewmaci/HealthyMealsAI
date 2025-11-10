@@ -6,10 +6,7 @@ interface Props {
   description?: string;
 }
 
-const {
-  title = "HealthyMealsAI",
-  description,
-} = Astro.props as Props;
+const { title = "HealthyMealsAI", description } = Astro.props as Props;
 
 const session = Astro.locals.session;
 const isAuthenticated = Boolean(session?.user?.id);
@@ -32,32 +29,34 @@ const isAuthenticated = Boolean(session?.user?.id);
             isAuthenticated ? "justify-between" : "justify-center"
           }`}
         >
-          <a href="/" class="text-base font-semibold tracking-tight text-foreground">
-            HealthyMealsAI
-          </a>
-          {isAuthenticated ? (
-            <nav class="flex items-center gap-3 text-sm text-muted-foreground">
-              <a class="hover:text-foreground" href="/recipes">Recipes</a>
-              <a class="hover:text-foreground" href="/profile">Profile</a>
-            </nav>
-          ) : null}
+          <a href="/" class="text-base font-semibold tracking-tight text-foreground"> HealthyMealsAI </a>
+          {
+            isAuthenticated ? (
+              <nav class="flex items-center gap-3 text-sm text-muted-foreground">
+                <a class="hover:text-foreground" href="/recipes">
+                  Recipes
+                </a>
+                <a class="hover:text-foreground" href="/profile">
+                  Profile
+                </a>
+              </nav>
+            ) : null
+          }
         </div>
       </header>
       <main class="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
         <div class="w-full max-w-md">
-          {description ? (
-            <p class="mb-6 text-center text-sm text-muted-foreground">{description}</p>
-          ) : null}
+          {description ? <p class="mb-6 text-center text-sm text-muted-foreground">{description}</p> : null}
           <slot />
         </div>
       </main>
       <footer class="border-t border-border bg-card/30">
         <div class="mx-auto flex w-full max-w-5xl justify-center px-6 py-6">
-          <p class="text-xs text-muted-foreground">© {new Date().getFullYear()} HealthyMealsAI. All rights reserved.</p>
+          <p class="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} HealthyMealsAI. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
   </body>
 </html>
-
-

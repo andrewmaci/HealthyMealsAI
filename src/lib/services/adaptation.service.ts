@@ -167,7 +167,7 @@ const buildQuotaDto = (
   used: number,
   windowStart: string,
   windowEnd: string,
-  timezone: AdaptationQuotaDTO["timezone"],
+  timezone: AdaptationQuotaDTO["timezone"]
 ): AdaptationQuotaDTO => ({
   limit,
   used,
@@ -249,19 +249,21 @@ const buildAdaptationSystemPrompt = (): string => {
  */
 const buildAdaptationUserPrompt = (input: AiAdaptationInput): string => {
   const { recipe, profile, command } = input;
-  
+
   const sections: string[] = [];
-  
+
   // Recipe details
   sections.push("**Original Recipe:**");
   sections.push(`Title: ${recipe.title}`);
   sections.push(`Servings: ${recipe.servings}`);
-  sections.push(`Current Macros: ${recipe.macros.kcal} kcal, ${recipe.macros.protein}g protein, ${recipe.macros.carbs}g carbs, ${recipe.macros.fat}g fat`);
+  sections.push(
+    `Current Macros: ${recipe.macros.kcal} kcal, ${recipe.macros.protein}g protein, ${recipe.macros.carbs}g carbs, ${recipe.macros.fat}g fat`
+  );
   sections.push("");
   sections.push("**Recipe Content:**");
   sections.push(recipe.recipeText);
   sections.push("");
-  
+
   // Adaptation goal
   sections.push("**Adaptation Goal:**");
   const goalDescriptions: Record<RecipeAdaptationRequestCommand["goal"], string> = {
@@ -272,29 +274,35 @@ const buildAdaptationUserPrompt = (input: AiAdaptationInput): string => {
   };
   sections.push(goalDescriptions[command.goal]);
   sections.push("");
-  
+
   // User constraints
   if (profile.allergens.length > 0 || profile.dislikedIngredients.length > 0) {
     sections.push("**CRITICAL Constraints:**");
     if (profile.allergens.length > 0) {
-      sections.push(`- ALLERGENS TO AVOID: ${profile.allergens.join(", ")} - These MUST be completely removed or substituted`);
+      sections.push(
+        `- ALLERGENS TO AVOID: ${profile.allergens.join(", ")} - These MUST be completely removed or substituted`
+      );
     }
     if (profile.dislikedIngredients.length > 0) {
-      sections.push(`- DISLIKED INGREDIENTS: ${profile.dislikedIngredients.join(", ")} - These should be removed or substituted`);
+      sections.push(
+        `- DISLIKED INGREDIENTS: ${profile.dislikedIngredients.join(", ")} - These should be removed or substituted`
+      );
     }
     sections.push("");
   }
-  
+
   // Additional notes
   if (command.notes && command.notes.trim().length > 0) {
     sections.push("**Additional User Requirements:**");
     sections.push(command.notes);
     sections.push("");
   }
-  
+
   sections.push("**Instructions:**");
-  sections.push("Provide a fully adapted recipe with accurate macro calculations. Ensure all allergens and disliked ingredients are completely removed or substituted.");
-  
+  sections.push(
+    "Provide a fully adapted recipe with accurate macro calculations. Ensure all allergens and disliked ingredients are completely removed or substituted."
+  );
+
   return sections.join("\n");
 };
 
@@ -344,7 +352,7 @@ const getAdaptationResponseSchema = (): JsonSchema => ({
  * Generates a recipe adaptation using OpenRouter AI
  */
 const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptationResponse> => {
-  console.log('Starting AI adaptation generation', {
+  console.log("Starting AI adaptation generation", {
     recipeId: input.recipe.id,
     goal: input.command.goal,
     hasProfile: !!input.profile,
@@ -352,7 +360,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
 
   const systemMessage = buildSystemMessage(buildAdaptationSystemPrompt());
   const userMessage = buildUserMessage(buildAdaptationUserPrompt(input));
-  
+
   const responseFormat: ResponseFormat = {
     type: "json_schema",
     json_schema: {
@@ -361,8 +369,8 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
       schema: getAdaptationResponseSchema(),
     },
   };
-  
-  console.log('Calling OpenRouter API for adaptation', {
+
+  console.log("Calling OpenRouter API for adaptation", {
     messageCount: 2,
     schema: responseFormat.json_schema.name,
   });
@@ -378,13 +386,13 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
         },
       }
     );
-    
-    console.log('OpenRouter API call successful', {
+
+    console.log("OpenRouter API call successful", {
       hasRecipeText: !!response.data.recipeText,
       hasMacros: !!response.data.macros,
       hasExplanation: !!response.data.explanation,
     });
-    
+
     // Round macros to 2 decimal places
     const adaptedMacros = {
       kcal: roundToTwo(response.data.macros.kcal),
@@ -392,7 +400,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
       carbs: roundToTwo(response.data.macros.carbs),
       fat: roundToTwo(response.data.macros.fat),
     };
-    
+
     return {
       recipeText: response.data.recipeText,
       macros: adaptedMacros,
@@ -406,7 +414,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
         message: error.message,
         statusCode: error.statusCode,
       });
-      
+
       // Map specific OpenRouter errors to adaptation errors
       if (error.code === "rate_limit_error" || error.code === "quota_exceeded_error") {
         throw new AdaptationServiceError({
@@ -415,7 +423,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
           cause: error,
         });
       }
-      
+
       if (error.code === "timeout_error") {
         throw new AdaptationServiceError({
           code: "ai_timeout",
@@ -423,7 +431,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
           cause: error,
         });
       }
-      
+
       if (error.code === "authentication_error" || error.code === "configuration_error") {
         throw new AdaptationServiceError({
           code: "proposal_generation_failed",
@@ -431,7 +439,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
           cause: error,
         });
       }
-      
+
       // Generic AI error
       throw new AdaptationServiceError({
         code: "ai_unprocessable",
@@ -439,7 +447,7 @@ const generateAiAdaptation = async (input: AiAdaptationInput): Promise<AiAdaptat
         cause: error,
       });
     }
-    
+
     // Unexpected error
     throw new AdaptationServiceError({
       code: "proposal_generation_failed",
@@ -472,10 +480,7 @@ const mapHistoryRowToDTO = (row: {
   createdAt: row.created_at,
 });
 
-const applyHistoryFilters = (
-  builder: ReturnType<SupabaseClient["from"]>,
-  query: GetRecipeAdaptationHistoryQuery,
-) => {
+const applyHistoryFilters = (builder: ReturnType<SupabaseClient["from"]>, query: GetRecipeAdaptationHistoryQuery) => {
   let chained = builder;
 
   if (query.start) {
@@ -493,7 +498,7 @@ export const getAdaptationHistory = async (
   supabase: SupabaseClient,
   userId: string,
   recipeId: string,
-  query: GetRecipeAdaptationHistoryQuery,
+  query: GetRecipeAdaptationHistoryQuery
 ): Promise<RecipeAdaptationHistoryResponseDTO> => {
   const { count: recipeCount, error: recipeError } = await supabase
     .from("recipes")
@@ -532,7 +537,7 @@ export const getAdaptationHistory = async (
       .select("id", { head: true, count: "exact" })
       .eq("user_id", userId)
       .eq("recipe_id", recipeId),
-    query,
+    query
   ).maybeSingle();
 
   const dataPromise = applyHistoryFilters(
@@ -541,7 +546,7 @@ export const getAdaptationHistory = async (
       .select("id, recipe_id, created_at")
       .eq("user_id", userId)
       .eq("recipe_id", recipeId),
-    query,
+    query
   )
     .order("created_at", { ascending: query.sortOrder === "asc" })
     .range(rangeStart, rangeEnd);
@@ -598,7 +603,7 @@ export const acceptAdaptation = async (
   supabase: SupabaseClient,
   userId: string,
   recipeId: string,
-  command: RecipeAdaptationAcceptCommand,
+  command: RecipeAdaptationAcceptCommand
 ): Promise<RecipeDTO> => {
   const { data: logEntry, error: logError } = await supabase
     .from("adaptation_logs")
@@ -681,7 +686,9 @@ export const acceptAdaptation = async (
     })
     .eq("id", recipeId)
     .eq("user_id", userId)
-    .select("id, title, servings, kcal, protein, carbs, fat, recipe_text, last_adaptation_explanation, created_at, updated_at")
+    .select(
+      "id, title, servings, kcal, protein, carbs, fat, recipe_text, last_adaptation_explanation, created_at, updated_at"
+    )
     .maybeSingle();
 
   if (updateError || !recipeRow) {
@@ -704,7 +711,7 @@ export const acceptAdaptation = async (
 
 export const getProfilePreferences = async (
   supabase: SupabaseClient,
-  userId: string,
+  userId: string
 ): Promise<{
   allergens: string[];
   dislikedIngredients: string[];
@@ -739,7 +746,7 @@ export const getProfilePreferences = async (
 const fetchRecipeForAdaptation = async (
   supabase: SupabaseClient,
   userId: string,
-  recipeId: string,
+  recipeId: string
 ): Promise<RecipeDTO> => {
   const { data, error } = await supabase
     .from("recipes")
@@ -775,7 +782,7 @@ const fetchRecipeForAdaptation = async (
 const calculateQuota = async (
   supabase: SupabaseClient,
   userId: string,
-  timezone: AdaptationQuotaDTO["timezone"],
+  timezone: AdaptationQuotaDTO["timezone"]
 ): Promise<AdaptationQuotaUsage> => {
   const limit = getDailyAdaptationLimit();
   const now = new Date();
@@ -816,7 +823,7 @@ const calculateQuota = async (
 
 export const getAdaptationQuota = async (
   supabase: SupabaseClient,
-  userId: string,
+  userId: string
 ): Promise<AdaptationQuotaResponseDTO> => {
   const profile = await getProfilePreferences(supabase, userId);
   const quota = await calculateQuota(supabase, userId, profile.timezone);
@@ -835,22 +842,14 @@ const assertQuotaAvailable = (quota: AdaptationQuotaUsage) => {
   }
 };
 
-const insertAdaptationLog = async (
-  supabase: SupabaseClient,
-  userId: string,
-  recipeId: string,
-): Promise<string> => {
+const insertAdaptationLog = async (supabase: SupabaseClient, userId: string, recipeId: string): Promise<string> => {
   const payload: TablesInsert<"adaptation_logs"> = {
     user_id: userId,
     recipe_id: recipeId,
     created_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
-    .from("adaptation_logs")
-    .insert(payload)
-    .select("id")
-    .single();
+  const { data, error } = await supabase.from("adaptation_logs").insert(payload).select("id").single();
 
   if (error || !data) {
     console.error("Failed to insert adaptation log", {
@@ -873,7 +872,7 @@ const buildProposalDto = (
   proposal: AiAdaptationResponse,
   logId: string,
   command: RecipeAdaptationRequestCommand,
-  quota: AdaptationQuotaUsage,
+  quota: AdaptationQuotaUsage
 ): RecipeAdaptationProposalDTO => ({
   logId,
   goal: command.goal,
@@ -895,7 +894,7 @@ export const proposeAdaptation = async (
   userId: string,
   recipeId: string,
   command: RecipeAdaptationRequestCommand,
-  options?: { idempotencyKey?: string },
+  options?: { idempotencyKey?: string }
 ): Promise<ProposeAdaptationResult> => {
   ensureIdempotencyKey(options?.idempotencyKey);
 
@@ -912,34 +911,37 @@ export const proposeAdaptation = async (
     ? buildIdempotencyCacheKey(userId, recipeId, options.idempotencyKey)
     : undefined;
 
-  if (cacheKey && idempotencyCache.has(cacheKey)) {
-    return idempotencyCache.get(cacheKey)!;
+  if (cacheKey) {
+    const cachedResult = idempotencyCache.get(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
   }
 
   inFlightAdaptations.add(inFlightKey);
 
   try {
-    console.log('Starting adaptation proposal', {
+    console.log("Starting adaptation proposal", {
       userId,
       recipeId,
       goal: command.goal,
     });
 
     const profile = await getProfilePreferences(supabase, userId);
-    console.log('Profile loaded', {
+    console.log("Profile loaded", {
       allergenCount: profile.allergens.length,
       dislikedCount: profile.dislikedIngredients.length,
       timezone: profile.timezone,
     });
 
     const recipe = await fetchRecipeForAdaptation(supabase, userId, recipeId);
-    console.log('Recipe loaded', {
+    console.log("Recipe loaded", {
       recipeId: recipe.id,
       title: recipe.title,
     });
 
     const quota = await calculateQuota(supabase, userId, profile.timezone);
-    console.log('Quota calculated', {
+    console.log("Quota calculated", {
       used: quota.used,
       limit: quota.limit,
       remaining: quota.remaining,
@@ -948,7 +950,7 @@ export const proposeAdaptation = async (
     assertQuotaAvailable(quota);
 
     const logId = await insertAdaptationLog(supabase, userId, recipeId);
-    console.log('Adaptation log created', { logId });
+    console.log("Adaptation log created", { logId });
 
     const aiResponse = await generateAiAdaptation({
       recipe,
@@ -956,7 +958,7 @@ export const proposeAdaptation = async (
       command,
     });
 
-    console.log('AI adaptation completed successfully');
+    console.log("AI adaptation completed successfully");
 
     const proposalDto = buildProposalDto(aiResponse, logId, command, quota);
 
@@ -994,4 +996,3 @@ export const proposeAdaptation = async (
     inFlightAdaptations.delete(inFlightKey);
   }
 };
-

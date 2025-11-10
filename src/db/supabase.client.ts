@@ -13,7 +13,10 @@ export const cookieOptions: CookieOptionsWithName = {
   secure: true,
 };
 
-type ParsedCookie = { name: string; value: string };
+interface ParsedCookie {
+  name: string;
+  value: string;
+}
 
 function parseCookieHeader(cookieHeader: string): ParsedCookie[] {
   if (!cookieHeader) {

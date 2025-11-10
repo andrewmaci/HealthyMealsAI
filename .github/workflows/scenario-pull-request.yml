@@ -30,68 +30,23 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  unit-tests:
-    name: Unit Tests
+  tests:
+    name: ${{ matrix.job-name }}
     runs-on: ubuntu-latest
     needs: lint
-    outputs:
-      coverage: ${{ steps.coverage-summary.outputs.summary }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Setup Node and install dependencies
-        uses: ./.github/actions/setup-node-install
-
-      - name: Run Vitest with coverage
-        shell: bash
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_DEFAULT_MODEL: ${{ vars.OPENROUTER_DEFAULT_MODEL }}
-          E2E_USERNAME_ID: ${{ secrets.E2E_USERNAME_ID }}
-          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
-          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-        run: npm run test:unit:coverage -- --coverage.dir=coverage/unit --coverage.reporter=text-summary --coverage.reporter=lcov
-
-      - name: Collect unit coverage summary
-        id: coverage-summary
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = 'coverage/unit/coverage-summary.json';
-          if (!fs.existsSync(path)) {
-            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'summary=Unit coverage summary not found\n');
-            process.exit(0);
-          }
-          const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
-          const metrics = ['lines', 'statements', 'branches', 'functions'];
-          const format = (metric) => {
-            const data = summary.total[metric] || {};
-            if (!('pct' in data)) {
-              return `${metric}: n/a`;
-            }
-            return `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${data.pct.toFixed(2)}% (${data.covered}/${data.total})`;
-          };
-          const message = metrics.map(format).join(', ');
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `summary=${message}\n`);
-          NODE
-
-      - name: Upload unit coverage artifacts
-        uses: actions/upload-artifact@v5
-        with:
-          name: unit-coverage
-          path: coverage/unit
-          if-no-files-found: error
-
-  e2e-tests:
-    name: End-to-End Tests
-    runs-on: ubuntu-latest
-    needs: lint
-    outputs:
-      coverage: ${{ steps.coverage-summary.outputs.summary }}
+    environment: HealthyAIEnv
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: integration
+            job-name: Integration Tests
+            artifact-name: integration-coverage
+            coverage-path: coverage/integration
+          - suite: e2e
+            job-name: End-to-End Tests
+            artifact-name: e2e-coverage
+            coverage-path: coverage/e2e
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -100,10 +55,12 @@ jobs:
         uses: ./.github/actions/setup-node-install
 
       - name: Install Playwright browsers
+        if: matrix.suite == 'e2e'
         shell: bash
         run: npx playwright install --with-deps chromium
 
       - name: Provision test environment variables
+        if: matrix.suite == 'e2e'
         shell: bash
         run: |
           if [ -f .env.test ]; then
@@ -115,7 +72,21 @@ jobs:
             echo "No .env.example found, skipping .env.test provisioning"
           fi
 
-      - name: Run Playwright end-to-end tests with coverage
+      - name: Run Vitest integration suite with coverage
+        if: matrix.suite == 'integration'
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_DEFAULT_MODEL: ${{ vars.OPENROUTER_DEFAULT_MODEL }}
+          E2E_USERNAME_ID: ${{ secrets.E2E_USERNAME_ID }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: npm run test:unit:coverage -- --coverage.dir=coverage/integration --coverage.reporter=text-summary --coverage.reporter=lcov
+
+      - name: Run Playwright end-to-end tests
+        if: matrix.suite == 'e2e'
         shell: bash
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -126,15 +97,44 @@ jobs:
           E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
           PLAYWRIGHT_JAVASCRIPT_COVERAGE: "1"
-        run: npx playwright test --coverage --reporter=line
+        run: npx playwright test --reporter=line
+
+      - name: Collect integration coverage summary
+        if: matrix.suite == 'integration'
+        id: integration-coverage-summary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const summaryDir = 'coverage/integration';
+          const path = `${summaryDir}/coverage-summary.json`;
+          fs.mkdirSync(summaryDir, { recursive: true });
+          let message = 'Integration coverage summary not found';
+          if (fs.existsSync(path)) {
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const metrics = ['lines', 'statements', 'branches', 'functions'];
+            const format = (metric) => {
+              const data = summary.total[metric] || {};
+              if (!('pct' in data)) {
+                return `${metric}: n/a`;
+              }
+              return `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${data.pct.toFixed(2)}% (${data.covered}/${data.total})`;
+            };
+            message = metrics.map(format).join(', ');
+          }
+          fs.writeFileSync(`${summaryDir}/summary.txt`, message);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `summary=${message.replace(/\n/g, ' ')}\n`);
+          NODE
 
       - name: Collect e2e coverage summary
-        id: coverage-summary
+        if: matrix.suite == 'e2e'
+        id: e2e-coverage-summary
         shell: bash
         run: |
           mkdir -p coverage/e2e
           if [ ! -d .playwright-coverage ]; then
             echo "summary=E2E coverage data not found" >> "$GITHUB_OUTPUT"
+            echo "E2E coverage data not found" > coverage/e2e/summary.txt
             exit 0
           fi
           npx playwright show-coverage --reporter=lcov --output=coverage/e2e/lcov.info
@@ -145,12 +145,13 @@ jobs:
             echo "$coverage_text"
             echo EOF
           } >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$coverage_text" > coverage/e2e/summary.txt
 
-      - name: Upload e2e coverage artifacts
+      - name: Upload coverage artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: e2e-coverage
-          path: coverage/e2e
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.coverage-path }}
           if-no-files-found: error
 
   status-comment:
@@ -158,29 +159,62 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - lint
-      - unit-tests
-      - e2e-tests
-    if: ${{ needs.lint.result == 'success' && needs['unit-tests'].result == 'success' && needs['e2e-tests'].result == 'success' }}
+      - tests
+    if: ${{ needs.lint.result == 'success' && needs.tests.result == 'success' }}
     steps:
+      - name: Download integration coverage artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: integration-coverage
+          path: coverage/integration
+
+      - name: Download e2e coverage artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: e2e-coverage
+          path: coverage/e2e
+
+      - name: Prepare coverage summaries
+        shell: bash
+        run: |
+          integration_summary="Integration coverage summary unavailable."
+          if [ -f coverage/integration/summary.txt ]; then
+            integration_summary=$(cat coverage/integration/summary.txt)
+          fi
+          e2e_summary="E2E coverage summary unavailable."
+          if [ -f coverage/e2e/summary.txt ]; then
+            e2e_summary=$(cat coverage/e2e/summary.txt)
+          fi
+          {
+            echo "INTEGRATION_COVERAGE<<'EOF'"
+            echo "$integration_summary"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+          {
+            echo "E2E_COVERAGE<<'EOF'"
+            echo "$e2e_summary"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
       - name: Publish pull request status comment
         uses: actions/github-script@v8
         env:
-          UNIT_COVERAGE: ${{ needs['unit-tests'].outputs.coverage }}
-          E2E_COVERAGE: ${{ needs['e2e-tests'].outputs.coverage }}
+          INTEGRATION_COVERAGE: ${{ env.INTEGRATION_COVERAGE }}
+          E2E_COVERAGE: ${{ env.E2E_COVERAGE }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const unitCoverage = process.env.UNIT_COVERAGE || 'Unit coverage summary unavailable.';
+            const integrationCoverage = process.env.INTEGRATION_COVERAGE || 'Integration coverage summary unavailable.';
             const e2eCoverage = process.env.E2E_COVERAGE || 'E2E coverage summary unavailable.';
             const body = [
               '### ✅ Scenario pull request checks passed',
               '',
               '- Lint: success',
-              `- Unit tests: success (${unitCoverage})`,
+              `- Integration tests: success (${integrationCoverage})`,
               `- E2E tests: success (${e2eCoverage})`,
               '',
               'Artifacts with coverage details:',
-              '- `unit-coverage`',
+              '- `integration-coverage`',
               '- `e2e-coverage`'
             ].join('\n');
             await github.rest.issues.createComment({

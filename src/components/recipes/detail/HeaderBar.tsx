@@ -128,5 +128,3 @@ const HeaderBar = ({ recipeId, title, onDelete, onRetry, isDeleting = false, isL
 };
 
 export default HeaderBar;
-
-

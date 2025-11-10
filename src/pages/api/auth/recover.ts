@@ -4,10 +4,7 @@ import { z } from "zod";
 export const prerender = false;
 
 const RecoverRequestSchema = z.object({
-  email: z
-    .string({ required_error: "Email is required." })
-    .trim()
-    .email("Invalid email format."),
+  email: z.string({ required_error: "Email is required." }).trim().email("Invalid email format."),
 });
 
 const buildJsonResponse = (body: unknown, status: number) =>
@@ -23,7 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return buildJsonResponse({ error: "Invalid JSON payload." }, 400);
   }
 
@@ -39,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           fieldErrors,
         },
       },
-      400,
+      400
     );
   }
 
@@ -60,5 +57,3 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return buildJsonResponse({ success: true }, 200);
 };
-
-

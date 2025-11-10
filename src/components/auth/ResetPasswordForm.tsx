@@ -77,12 +77,14 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
       let next = previous;
 
       if (previous[field]) {
-        const { [field]: _removed, ...rest } = previous;
+        const { [field]: removed, ...rest } = previous;
+        void removed;
         next = rest;
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
       }
 
@@ -98,7 +100,8 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
         if (!previous[field]) {
           next = previous;
         } else {
-          const { [field]: _removed, ...rest } = previous;
+          const { [field]: removed, ...rest } = previous;
+          void removed;
           next = rest;
         }
       } else {
@@ -109,7 +112,8 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
       }
 
@@ -147,7 +151,8 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
           return previous;
         }
 
-        const { form: _form, ...rest } = previous;
+        const { form: formError, ...rest } = previous;
+        void formError;
         return rest;
       });
 
@@ -191,17 +196,20 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
               } | null;
 
               if (data?.details?.fieldErrors) {
-                nextFieldErrors = Object.entries(data.details.fieldErrors).reduce<FieldErrors>((accumulator, [field, fieldErrors]) => {
-                  if (!Array.isArray(fieldErrors) || fieldErrors.length === 0) {
+                nextFieldErrors = Object.entries(data.details.fieldErrors).reduce<FieldErrors>(
+                  (accumulator, [field, fieldErrors]) => {
+                    if (!Array.isArray(fieldErrors) || fieldErrors.length === 0) {
+                      return accumulator;
+                    }
+
+                    if (field === "password" || field === "confirmPassword") {
+                      accumulator[field] = fieldErrors[0];
+                    }
+
                     return accumulator;
-                  }
-
-                  if (field === "password" || field === "confirmPassword") {
-                    accumulator[field] = fieldErrors[0];
-                  }
-
-                  return accumulator;
-                }, {});
+                  },
+                  {}
+                );
               }
 
               message = data?.error || data?.message;
@@ -257,7 +265,7 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
         setIsSubmitting(false);
       }
     },
-    [buildValidationErrors, redirectUrl, token, values.password],
+    [buildValidationErrors, redirectUrl, token, values.password]
   );
 
   const formError = errors.form;
@@ -265,10 +273,13 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
   const footer = useMemo(
     () => (
       <p>
-        Don&apos;t need to reset your password? <a href="/auth/signin" className="font-medium text-primary hover:underline">Return to sign in</a>
+        Don&apos;t need to reset your password?{" "}
+        <a href="/auth/signin" className="font-medium text-primary hover:underline">
+          Return to sign in
+        </a>
       </p>
     ),
-    [],
+    []
   );
 
   const disableInputs = isSubmitting || isSuccess;
@@ -281,13 +292,19 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
     >
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {!token ? (
-          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+          <div
+            className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+            role="alert"
+          >
             This password reset link is invalid or has expired. Please request a new reset link.
           </div>
         ) : null}
 
         {formError ? (
-          <div className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+          <div
+            className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+            role="alert"
+          >
             {formError}
           </div>
         ) : null}
@@ -355,5 +372,3 @@ export function ResetPasswordForm({ token, redirectUrl = "/auth/signin" }: Reset
     </AuthFormLayout>
   );
 }
-
-

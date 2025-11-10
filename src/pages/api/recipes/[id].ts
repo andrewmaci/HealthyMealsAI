@@ -22,9 +22,7 @@ const buildJsonResponse = (body: unknown, status: number) =>
   });
 
 const RecipeIdSchema = z.string().uuid({ message: "Invalid recipe ID." });
-const UpdateRecipeReturnSchema = z
-  .enum(["minimal", "full"] as const)
-  .default("full");
+const UpdateRecipeReturnSchema = z.enum(["minimal", "full"] as const).default("full");
 
 const DeleteRecipeQuerySchema = z.object({
   confirm: z.coerce.boolean().optional(),
@@ -144,7 +142,7 @@ const buildValidationErrorResponse = (error: z.ZodError) =>
       error: "Validation failed.",
       details: error.flatten(),
     },
-    400,
+    400
   );
 
 export const GET: APIRoute = async ({ params, locals }) => {
@@ -164,7 +162,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
         error: "Validation failed.",
         details: validationResult.error.flatten(),
       },
-      400,
+      400
     );
   }
 
@@ -235,9 +233,15 @@ export const PUT: APIRoute = async ({ params, request, url, locals }) => {
   }
 
   try {
-    const updateResult = await updateRecipe(locals.supabase, idResult.data, userId, bodyResult.data as RecipeUpdateCommand, {
-      returnMode: returnModeResult.data,
-    });
+    const updateResult = await updateRecipe(
+      locals.supabase,
+      idResult.data,
+      userId,
+      bodyResult.data as RecipeUpdateCommand,
+      {
+        returnMode: returnModeResult.data,
+      }
+    );
 
     if (!updateResult) {
       return buildJsonResponse({ error: "Recipe not found." }, 404);
@@ -281,4 +285,3 @@ export const PUT: APIRoute = async ({ params, request, url, locals }) => {
     return buildJsonResponse({ error: "Failed to update recipe" }, 500);
   }
 };
-

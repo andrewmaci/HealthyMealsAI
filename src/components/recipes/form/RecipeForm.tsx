@@ -30,22 +30,22 @@ const MAX_EXPLANATION_LENGTH = 2_000;
 
 type MacroKey = (typeof MACRO_KEYS)[number];
 
-export type RecipeFormValues = {
+export interface RecipeFormValues {
   title: string;
   servings: string;
   macros: Record<MacroKey, string>;
   recipeText: string;
   lastAdaptationExplanation?: string;
-};
+}
 
-type FieldErrorMap = {
+interface FieldErrorMap {
   title?: string;
   servings?: string;
   macros?: Partial<Record<MacroKey, string>>;
   recipeText?: string;
   lastAdaptationExplanation?: string;
   form?: string;
-};
+}
 
 interface RecipeFormProps {
   mode: "create" | "edit";
@@ -190,9 +190,18 @@ const validateValues = (values: RecipeFormValues): ValidationResult => {
     return { errors };
   }
 
+  if (parsedServings === undefined) {
+    return {
+      errors: {
+        ...errors,
+        servings: errors.servings ?? "Servings are required.",
+      },
+    };
+  }
+
   const payload: RecipeCreateDto = {
     title,
-    servings: parsedServings!,
+    servings: parsedServings,
     macros: parsedMacros,
     recipeText,
   };
@@ -271,7 +280,11 @@ const FieldGroup = ({
   <div className="flex flex-col gap-2">
     <label htmlFor={htmlFor} className="text-sm font-medium text-foreground">
       {label}
-      {required ? <span className="ml-1 text-destructive" aria-hidden="true">*</span> : null}
+      {required ? (
+        <span className="ml-1 text-destructive" aria-hidden="true">
+          *
+        </span>
+      ) : null}
     </label>
     {description ? (
       <p id={descriptionId} className="text-sm text-muted-foreground">
@@ -283,13 +296,7 @@ const FieldGroup = ({
   </div>
 );
 
-export default function RecipeForm({
-  mode,
-  recipeId,
-  initialRecipe,
-  onSaved,
-  onCancel,
-}: RecipeFormProps) {
+export default function RecipeForm({ mode, recipeId, initialRecipe, onSaved, onCancel }: RecipeFormProps) {
   const componentId = useId();
 
   const [timezone, setTimezone] = useState<string>(() => getDefaultTimezone());
@@ -435,18 +442,24 @@ export default function RecipeForm({
     };
   }, [initialRecipe, mode, recipeId]);
 
-  const ids = useMemo(() => ({
-    title: `${componentId}-title`,
-    servings: `${componentId}-servings`,
-    macros: MACRO_KEYS.reduce<Record<MacroKey, string>>((acc, key) => {
-      acc[key] = `${componentId}-macros-${key}`;
-      return acc;
-    }, {} as Record<MacroKey, string>),
-    recipeText: `${componentId}-recipe-text`,
-    recipeTextCounter: `${componentId}-recipe-text-counter`,
-    explanation: `${componentId}-last-adaptation`,
-    formError: `${componentId}-form-error`,
-  }), [componentId]);
+  const ids = useMemo(
+    () => ({
+      title: `${componentId}-title`,
+      servings: `${componentId}-servings`,
+      macros: MACRO_KEYS.reduce<Record<MacroKey, string>>(
+        (acc, key) => {
+          acc[key] = `${componentId}-macros-${key}`;
+          return acc;
+        },
+        {} as Record<MacroKey, string>
+      ),
+      recipeText: `${componentId}-recipe-text`,
+      recipeTextCounter: `${componentId}-recipe-text-counter`,
+      explanation: `${componentId}-last-adaptation`,
+      formError: `${componentId}-form-error`,
+    }),
+    [componentId]
+  );
 
   const remainingChars = MAX_RECIPE_TEXT_LENGTH - values.recipeText.length;
   const isOverLimit = remainingChars < 0;
@@ -464,12 +477,14 @@ export default function RecipeForm({
 
       if (field === "macros") {
         if (prev.macros && macroKey && prev.macros[macroKey]) {
-          const nextMacros = { ...prev.macros };
-          delete nextMacros[macroKey];
+          const { [macroKey]: removedMacro, ...restMacros } = prev.macros;
+          void removedMacro;
+          const nextMacros = restMacros as Partial<Record<MacroKey, string>>;
           changed = true;
 
           if (Object.keys(nextMacros).length === 0) {
-            const { macros, ...rest } = prev;
+            const { macros: removedMacros, ...rest } = prev;
+            void removedMacros;
             next = rest;
           } else {
             next = {
@@ -479,13 +494,15 @@ export default function RecipeForm({
           }
         }
       } else if (prev[field]) {
-        const { [field]: _removed, ...rest } = prev;
+        const { [field]: removed, ...rest } = prev;
+        void removed;
         next = rest;
         changed = true;
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
         changed = true;
       }
@@ -539,7 +556,7 @@ export default function RecipeForm({
         explanationRef.current?.focus();
       }
     },
-    [carbsRef, fatRef, kcalRef, proteinRef],
+    [carbsRef, fatRef, kcalRef, proteinRef]
   );
 
   const handleBlur = useCallback(() => {
@@ -565,7 +582,7 @@ export default function RecipeForm({
       setIsSubmitting(true);
 
       try {
-        const targetRecipeId = mode === "create" ? undefined : recipeId ?? initialRecipe?.id;
+        const targetRecipeId = mode === "create" ? undefined : (recipeId ?? initialRecipe?.id);
 
         if (mode === "edit" && !targetRecipeId) {
           setSubmitError("Recipe identifier is missing.");
@@ -662,7 +679,18 @@ export default function RecipeForm({
         setIsSubmitting(false);
       }
     },
-    [focusFirstInvalidField, initialRecipe?.id, mode, onSaved, parseApiError, readStandardApiResponse, recipeId, resetFormErrors, timezone, values],
+    [
+      focusFirstInvalidField,
+      initialRecipe?.id,
+      mode,
+      onSaved,
+      parseApiError,
+      readStandardApiResponse,
+      recipeId,
+      resetFormErrors,
+      timezone,
+      values,
+    ]
   );
 
   const handleCancel = useCallback(() => {
@@ -698,7 +726,9 @@ export default function RecipeForm({
           {loadError}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Button variant="outline" onClick={() => (window.location.href = "/recipes")}>Return to recipes</Button>
+          <Button variant="outline" onClick={() => (window.location.href = "/recipes")}>
+            Return to recipes
+          </Button>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
       </div>
@@ -741,8 +771,8 @@ export default function RecipeForm({
           aria-invalid={errors.title ? "true" : undefined}
           aria-describedby={errors.title ? `${ids.title}-error` : undefined}
           className={cn(
-            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition", 
-            errors.title ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring",
+            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition",
+            errors.title ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring"
           )}
         />
       </FieldGroup>
@@ -776,8 +806,8 @@ export default function RecipeForm({
           aria-invalid={errors.servings ? "true" : undefined}
           aria-describedby={errors.servings ? `${ids.servings}-error` : undefined}
           className={cn(
-            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition", 
-            errors.servings ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring",
+            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition",
+            errors.servings ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring"
           )}
         />
       </FieldGroup>
@@ -819,8 +849,8 @@ export default function RecipeForm({
                   aria-invalid={errorMessage ? "true" : undefined}
                   aria-describedby={errorId}
                   className={cn(
-                    "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition", 
-                    errorMessage ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring",
+                    "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition",
+                    errorMessage ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring"
                   )}
                 />
                 <InlineError id={errorId} message={errorMessage} />
@@ -857,8 +887,8 @@ export default function RecipeForm({
           maxLength={MAX_RECIPE_TEXT_LENGTH}
           rows={10}
           className={cn(
-            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition", 
-            errors.recipeText ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring",
+            "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition",
+            errors.recipeText ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring"
           )}
         />
         <CharacterCounter current={values.recipeText.length} max={MAX_RECIPE_TEXT_LENGTH} id={ids.recipeTextCounter} />
@@ -906,13 +936,15 @@ export default function RecipeForm({
               aria-invalid={errors.lastAdaptationExplanation ? "true" : undefined}
               aria-describedby={cn(
                 errors.lastAdaptationExplanation ? `${ids.explanation}-error` : undefined,
-                `${ids.explanation}-description`,
+                `${ids.explanation}-description`
               )}
               maxLength={MAX_EXPLANATION_LENGTH}
               rows={5}
               className={cn(
-                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition", 
-                errors.lastAdaptationExplanation ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-ring",
+                "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition",
+                errors.lastAdaptationExplanation
+                  ? "border-destructive focus-visible:ring-destructive"
+                  : "focus-visible:ring-ring"
               )}
             />
           </FieldGroup>
@@ -966,4 +998,3 @@ export default function RecipeForm({
     </form>
   );
 }
-

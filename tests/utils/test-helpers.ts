@@ -1,4 +1,4 @@
-import { vi, beforeEach, afterEach } from 'vitest';
+import { vi, beforeEach, afterEach } from "vitest";
 
 /**
  * Common test utilities and helpers
@@ -9,14 +9,16 @@ import { vi, beforeEach, afterEach } from 'vitest';
  * Wait for a specified amount of time
  * Useful for testing time-dependent behavior
  */
-export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Generate a random string
  * Useful for generating unique test data
  */
 export const randomString = (length = 10): string => {
-  return Math.random().toString(36).substring(2, length + 2);
+  return Math.random()
+    .toString(36)
+    .substring(2, length + 2);
 };
 
 /**
@@ -52,4 +54,3 @@ export const suppressConsoleError = () => {
     console.error = originalError;
   });
 };
-

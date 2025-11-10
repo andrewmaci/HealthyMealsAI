@@ -39,7 +39,7 @@ const RecipeListView = () => {
         search: value,
       }));
     },
-    [setQuery],
+    [setQuery]
   );
 
   const handleSortChange = useCallback(
@@ -51,7 +51,7 @@ const RecipeListView = () => {
         sortOrder: next.sortOrder,
       }));
     },
-    [setQuery],
+    [setQuery]
   );
 
   const handleApplyFilters = useCallback(
@@ -66,7 +66,7 @@ const RecipeListView = () => {
       }));
       setIsFilterOpen(false);
     },
-    [setQuery],
+    [setQuery]
   );
 
   const handleResetFilters = useCallback(() => {
@@ -88,7 +88,7 @@ const RecipeListView = () => {
         page,
       }));
     },
-    [setQuery],
+    [setQuery]
   );
 
   const handleOpenFilters = () => {
@@ -142,4 +142,3 @@ const RecipeListView = () => {
 };
 
 export default RecipeListView;
-

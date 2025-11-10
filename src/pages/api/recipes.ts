@@ -26,10 +26,13 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const parseResult = GetRecipesQuerySchema.safeParse(searchParams);
 
   if (!parseResult.success) {
-    return buildJsonResponse({
-      error: "Validation failed.",
-      details: parseResult.error.flatten(),
-    }, 400);
+    return buildJsonResponse(
+      {
+        error: "Validation failed.",
+        details: parseResult.error.flatten(),
+      },
+      400
+    );
   }
 
   const validatedQuery = parseResult.data;
@@ -68,7 +71,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
           error: "Validation failed.",
           details: parseResult.error.flatten(),
         },
-        400,
+        400
       );
     }
 
@@ -97,4 +100,3 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return buildJsonResponse({ error: "Failed to create recipe" }, 500);
   }
 };
-

@@ -9,16 +9,13 @@ const isValidTimezone = (timezone: string) => {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 };
 
 const SignUpRequestSchema = z.object({
-  email: z
-    .string({ required_error: "Email is required." })
-    .trim()
-    .email("Invalid email or password format."),
+  email: z.string({ required_error: "Email is required." }).trim().email("Invalid email or password format."),
   password: z
     .string({ required_error: "Password is required." })
     .min(8, "Password must be at least 8 characters.")
@@ -69,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return buildJsonResponse({ error: "Invalid JSON payload." }, 400);
   }
 
@@ -85,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           fieldErrors,
         },
       },
-      400,
+      400
     );
   }
 
@@ -106,7 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       {
         error: message,
       },
-      status,
+      status
     );
   }
 
@@ -126,10 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!profile.timezone) {
-      const { error: updateError } = await locals.supabase
-        .from("profiles")
-        .update({ timezone })
-        .eq("id", data.user.id);
+      const { error: updateError } = await locals.supabase.from("profiles").update({ timezone }).eq("id", data.user.id);
 
       if (updateError && updateError.code !== "PGRST116") {
         console.error("Failed to update profile timezone after sign-up", {
@@ -155,5 +149,3 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return buildJsonResponse({ success: true }, 201);
 };
-
-

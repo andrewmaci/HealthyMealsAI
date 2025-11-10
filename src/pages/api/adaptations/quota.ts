@@ -42,4 +42,3 @@ export const GET: APIRoute = async ({ locals }) => {
     return buildJsonResponse({ error: "Failed to retrieve adaptation quota." }, 500);
   }
 };
-

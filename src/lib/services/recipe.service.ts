@@ -11,12 +11,7 @@ import type { TablesInsert } from "../../db/database.types";
 
 type RecipeRow = Tables<"recipes">;
 
-type RecipeServiceErrorCode =
-  | "fetch_failed"
-  | "count_failed"
-  | "insert_failed"
-  | "update_failed"
-  | "delete_failed";
+type RecipeServiceErrorCode = "fetch_failed" | "count_failed" | "insert_failed" | "update_failed" | "delete_failed";
 
 interface RecipeServiceErrorOptions {
   message: string;
@@ -37,7 +32,7 @@ export class RecipeServiceError extends Error {
   }
 }
 
-const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
+export const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
   id: row.id,
   title: row.title,
   servings: row.servings,
@@ -56,7 +51,7 @@ const mapRecipeRowToDTO = (row: RecipeRow): RecipeDTO => ({
 export const createRecipe = async (
   supabase: SupabaseClient,
   userId: string,
-  command: RecipeCreateCommand,
+  command: RecipeCreateCommand
 ): Promise<RecipeDTO> => {
   const insertPayload = {
     title: command.title,
@@ -70,11 +65,7 @@ export const createRecipe = async (
     user_id: userId,
   } satisfies TablesInsert<"recipes">;
 
-  const { data, error } = await supabase
-    .from("recipes")
-    .insert(insertPayload)
-    .select()
-    .single();
+  const { data, error } = await supabase.from("recipes").insert(insertPayload).select().single();
 
   if (error || !data) {
     console.error("Failed to insert recipe", {
@@ -110,10 +101,7 @@ const applyFilters = (builder: ReturnType<SupabaseClient["from"]>, query: GetRec
 
   if (query.search) {
     const pattern = `%${query.search}%`;
-    chained = chained.or(
-      `title.ilike.${pattern},recipe_text.ilike.${pattern}`,
-      { foreignTable: undefined },
-    );
+    chained = chained.or(`title.ilike.${pattern},recipe_text.ilike.${pattern}`, { foreignTable: undefined });
   }
 
   if (query.minKcal !== undefined) {
@@ -138,7 +126,7 @@ const applyFilters = (builder: ReturnType<SupabaseClient["from"]>, query: GetRec
 export const getRecipes = async (
   supabase: SupabaseClient,
   userId: string,
-  query: GetRecipesQuery,
+  query: GetRecipesQuery
 ): Promise<RecipeListResponseDTO> => {
   const sortColumn = mapSortColumn(query.sortBy);
   const isAscending = query.sortOrder === "asc";
@@ -146,21 +134,15 @@ export const getRecipes = async (
   const rangeEnd = rangeStart + query.pageSize - 1;
 
   const countPromise = applyFilters(
-    supabase
-      .from("recipes")
-      .select("id", { count: "exact", head: true }),
+    supabase.from("recipes").select("id", { count: "exact", head: true }),
     query,
-    userId,
+    userId
   );
 
   const dataPromise = applyFilters(
-    supabase
-      .from("recipes")
-      .select("*")
-      .order(sortColumn, { ascending: isAscending })
-      .range(rangeStart, rangeEnd),
+    supabase.from("recipes").select("*").order(sortColumn, { ascending: isAscending }).range(rangeStart, rangeEnd),
     query,
-    userId,
+    userId
   );
 
   const [{ count, error: countError }, { data, error: dataError }] = await Promise.all([countPromise, dataPromise]);
@@ -210,14 +192,9 @@ export const getRecipes = async (
 export const getRecipeById = async (
   supabase: SupabaseClient,
   id: string,
-  userId: string,
+  userId: string
 ): Promise<RecipeDTO | null> => {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("recipes").select("*").eq("id", id).eq("user_id", userId).maybeSingle();
 
   if (error) {
     console.error("Failed to retrieve recipe", {
@@ -253,7 +230,7 @@ type UpdateRecipeResult =
   | (UpdateRecipeResultBase & { returnMode: "minimal" })
   | (UpdateRecipeResultBase & { returnMode: "full"; recipe: RecipeDTO });
 
-const buildUpdatePayload = (command: RecipeUpdateCommand) => {
+export const buildUpdatePayload = (command: RecipeUpdateCommand) => {
   const payload: Partial<TablesUpdate<"recipes">> = {};
 
   if (command.title !== undefined) {
@@ -287,7 +264,7 @@ export const updateRecipe = async (
   id: string,
   userId: string,
   command: RecipeUpdateCommand,
-  options: UpdateRecipeOptions,
+  options: UpdateRecipeOptions
 ): Promise<UpdateRecipeResult | null> => {
   const payload = buildUpdatePayload(command);
 
@@ -348,11 +325,7 @@ export const updateRecipe = async (
 };
 
 export const deleteRecipe = async (supabase: SupabaseClient, id: string, userId: string): Promise<boolean> => {
-  const { error, count } = await supabase
-    .from("recipes")
-    .delete({ count: "exact" })
-    .eq("id", id)
-    .eq("user_id", userId);
+  const { error, count } = await supabase.from("recipes").delete({ count: "exact" }).eq("id", id).eq("user_id", userId);
 
   if (error) {
     console.error("Failed to delete recipe", {
@@ -370,4 +343,3 @@ export const deleteRecipe = async (supabase: SupabaseClient, id: string, userId:
 
   return (count ?? 0) > 0;
 };
-

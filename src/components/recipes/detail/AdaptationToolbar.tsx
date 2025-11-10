@@ -29,7 +29,7 @@ const formatResetTime = (windowEnd: string | undefined, timezone: string | undef
       day: "numeric",
       timeZone: timezone ?? "UTC",
     }).format(date);
-  } catch (_error) {
+  } catch {
     return null;
   }
 };
@@ -91,5 +91,3 @@ const AdaptationToolbar = ({ quota, quotaError, onOpenWizard, isLoading }: Adapt
 };
 
 export default AdaptationToolbar;
-
-

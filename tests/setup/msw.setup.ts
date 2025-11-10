@@ -1,5 +1,5 @@
-import { setupServer } from 'msw/node';
-import { http, HttpResponse } from 'msw';
+import { setupServer } from "msw/node";
+import { http, HttpResponse } from "msw";
 
 /**
  * MSW (Mock Service Worker) setup for API mocking
@@ -9,8 +9,8 @@ import { http, HttpResponse } from 'msw';
 // Define request handlers
 export const handlers = [
   // Example handler - replace with your actual API endpoints
-  http.get('/api/health', () => {
-    return HttpResponse.json({ status: 'ok' });
+  http.get("/api/health", () => {
+    return HttpResponse.json({ status: "ok" });
   }),
 ];
 
@@ -19,7 +19,7 @@ export const server = setupServer(...handlers);
 
 // Start server before all tests
 export function setupMSW() {
-  server.listen({ onUnhandledRequest: 'warn' });
+  server.listen({ onUnhandledRequest: "warn" });
 }
 
 // Reset handlers after each test
@@ -31,4 +31,3 @@ export function resetMSW() {
 export function teardownMSW() {
   server.close();
 }
-

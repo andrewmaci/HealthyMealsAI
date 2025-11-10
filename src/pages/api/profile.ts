@@ -83,7 +83,7 @@ export const PUT: APIRoute = async ({ locals, request }) => {
 
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return buildJsonResponse({ error: "Invalid JSON body." }, 400);
   }
 
@@ -95,7 +95,7 @@ export const PUT: APIRoute = async ({ locals, request }) => {
         error: "Validation failed.",
         details: parseResult.error.flatten(),
       },
-      400,
+      400
     );
   }
 

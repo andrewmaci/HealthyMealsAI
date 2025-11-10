@@ -25,9 +25,7 @@ const currentPath = Astro.url.pathname;
   </head>
   <body class="min-h-screen bg-background text-foreground">
     <div class="flex min-h-screen flex-col">
-      {isAuthenticated ? (
-        <Header client:load userEmail={userEmail} currentPath={currentPath} />
-      ) : null}
+      {isAuthenticated ? <Header client:load userEmail={userEmail} currentPath={currentPath} /> : null}
       <main class="flex-1">
         <slot />
       </main>

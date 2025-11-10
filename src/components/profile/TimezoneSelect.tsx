@@ -17,14 +17,7 @@ interface TimezoneSelectProps {
   error?: string;
 }
 
-export function TimezoneSelect({
-  label,
-  value,
-  options,
-  onChange,
-  disabled,
-  error,
-}: TimezoneSelectProps) {
+export function TimezoneSelect({ label, value, options, onChange, disabled, error }: TimezoneSelectProps) {
   const sortedOptions = useMemo(() => options, [options]);
 
   return (
@@ -39,7 +32,7 @@ export function TimezoneSelect({
           className={cn(
             "rounded-md border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             disabled && "bg-muted/40",
-            error && "border-destructive",
+            error && "border-destructive"
           )}
         >
           <option value="">UTC (default)</option>
@@ -50,13 +43,7 @@ export function TimezoneSelect({
           ))}
         </select>
         {value !== null && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onChange(null)}
-            disabled={disabled}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)} disabled={disabled}>
             Clear
           </Button>
         )}
@@ -68,4 +55,3 @@ export function TimezoneSelect({
     </div>
   );
 }
-

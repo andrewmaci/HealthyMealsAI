@@ -14,4 +14,3 @@ export function InlineError({ id, message }: InlineErrorProps) {
     </p>
   );
 }
-

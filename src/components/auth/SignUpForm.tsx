@@ -97,12 +97,14 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
       let next = previous;
 
       if (previous[field]) {
-        const { [field]: _removed, ...rest } = previous;
+        const { [field]: removed, ...rest } = previous;
+        void removed;
         next = rest;
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
       }
 
@@ -118,7 +120,8 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
         if (!previous[field]) {
           next = previous;
         } else {
-          const { [field]: _removed, ...rest } = previous;
+          const { [field]: removed, ...rest } = previous;
+          void removed;
           next = rest;
         }
       } else {
@@ -129,7 +132,8 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
       }
 
       if (next.form) {
-        const { form: _form, ...rest } = next;
+        const { form: formError, ...rest } = next;
+        void formError;
         next = rest;
       }
 
@@ -166,7 +170,8 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
           return previous;
         }
 
-        const { form: _form, ...rest } = previous;
+        const { form: formError, ...rest } = previous;
+        void formError;
         return rest;
       });
 
@@ -211,17 +216,20 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
               } | null;
 
               if (data?.details?.fieldErrors) {
-                nextFieldErrors = Object.entries(data.details.fieldErrors).reduce<FieldErrors>((accumulator, [field, fieldErrors]) => {
-                  if (!Array.isArray(fieldErrors) || fieldErrors.length === 0) {
+                nextFieldErrors = Object.entries(data.details.fieldErrors).reduce<FieldErrors>(
+                  (accumulator, [field, fieldErrors]) => {
+                    if (!Array.isArray(fieldErrors) || fieldErrors.length === 0) {
+                      return accumulator;
+                    }
+
+                    if (field === "email" || field === "password" || field === "confirmPassword") {
+                      accumulator[field] = fieldErrors[0];
+                    }
+
                     return accumulator;
-                  }
-
-                  if (field === "email" || field === "password" || field === "confirmPassword") {
-                    accumulator[field] = fieldErrors[0];
-                  }
-
-                  return accumulator;
-                }, {});
+                  },
+                  {}
+                );
               }
 
               message = data?.error || data?.message;
@@ -274,7 +282,7 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
         setIsSubmitting(false);
       }
     },
-    [buildValidationErrors, redirectUrl, timezone, values.confirmPassword, values.email, values.password],
+    [buildValidationErrors, redirectUrl, timezone, values.confirmPassword, values.email, values.password]
   );
 
   const formError = errors.form;
@@ -282,10 +290,13 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
   const footer = useMemo(
     () => (
       <p>
-        Already have an account? <a href="/auth/signin" className="font-medium text-primary hover:underline">Sign in</a>
+        Already have an account?{" "}
+        <a href="/auth/signin" className="font-medium text-primary hover:underline">
+          Sign in
+        </a>
       </p>
     ),
-    [],
+    []
   );
 
   return (
@@ -296,7 +307,10 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
     >
       <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         {formError ? (
-          <div className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+          <div
+            className="rounded-md border border-destructive/60 bg-destructive/10 p-3 text-sm text-destructive"
+            role="alert"
+          >
             {formError}
           </div>
         ) : null}
@@ -365,7 +379,10 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
         />
 
         <div className="rounded-md border border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground">
-          <p>Your timezone will be set to <span className="font-medium text-foreground">{timezone}</span>. You can change this later in your profile settings.</p>
+          <p>
+            Your timezone will be set to <span className="font-medium text-foreground">{timezone}</span>. You can change
+            this later in your profile settings.
+          </p>
         </div>
 
         <Button type="submit" className="w-full" disabled={isSubmitting} aria-disabled={isSubmitting}>
@@ -375,5 +392,3 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
     </AuthFormLayout>
   );
 }
-
-
