@@ -27,7 +27,7 @@ Key constraints and assumptions:
 - Recipes are stored as a single multiline `recipe_text` field (up to 10,000 chars) with per‑serving macros.
 - User profile stores allergens and disliked ingredients; no per-recipe overrides.
 - AI provider is OpenRouter; adaptation runs support exactly one goal per submission and must return JSON: `{ recipe_text, macros: { kcal, protein, carbs, fat }, explanation }`.
-- Daily quota: max 10 successful adaptations per user per day, reset at user‑local midnight.
+- Daily quota: max 20 successful adaptations per user per day, reset at user‑local midnight.
 
 Primary reference: [.ai/prd.md](.ai/prd.md)
 
@@ -133,7 +133,7 @@ In scope (MVP):
 - User accounts and personal profiles for allergens/dislikes
 - Text-only recipes with CRUD operations and validation
 - Single‑goal AI adaptation per run with strict JSON output and acceptance overwrite
-- Quotas (10/day), input limits, safety guardrails, disclaimers
+- Quotas (20/day), input limits, safety guardrails, disclaimers
 
 Out of scope (MVP):
 - Importing recipes from URLs
