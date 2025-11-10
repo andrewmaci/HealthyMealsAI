@@ -26,13 +26,13 @@ export class SignInPage extends BasePage {
   }
 
   async signIn(email: string, password: string) {
-    await this.emailInput.click()
+    await this.emailInput.click();
     await this.emailInput.fill(email);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await this.passwordInput.click()
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await this.passwordInput.click();
     await this.passwordInput.fill(password);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     await this.submitButton.focus();
-    await this.submitButton.press('Enter');
+    await this.submitButton.press("Enter");
   }
 }
