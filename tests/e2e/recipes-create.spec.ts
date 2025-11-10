@@ -16,7 +16,6 @@ test.describe('Recipes - Create flow', () => {
     const signInPage = new SignInPage(page);
     await signInPage.goto();
     await signInPage.signIn(email, password);
-    await page.waitForTimeout(5000);
     await expect(page).toHaveURL(/\/recipes(?:\/?|\/.*)$/);
 
     const listPage = new RecipesListPage(page);
