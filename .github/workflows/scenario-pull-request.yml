@@ -84,7 +84,7 @@ jobs:
           E2E_USERNAME_ID: ${{ secrets.E2E_USERNAME_ID }}
           E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-        run: npm run test:unit:coverage -- --coverage.dir=coverage/integration --coverage.reporter=text-summary --coverage.reporter=lcov
+        run: npm run test:unit:coverage -- --coverage.dir=coverage/integration --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reporter=lcov
 
       - name: Run Playwright end-to-end tests
         if: matrix.suite == 'e2e'
@@ -98,7 +98,6 @@ jobs:
           E2E_USERNAME_ID: ${{ secrets.E2E_USERNAME_ID }}
           E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-          PLAYWRIGHT_JAVASCRIPT_COVERAGE: "1"
         run: npx playwright test --reporter=line
 
       - name: Collect integration coverage summary
@@ -128,26 +127,13 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `summary=${message.replace(/\n/g, ' ')}\n`);
           NODE
 
-      - name: Collect e2e coverage summary
+      - name: Collect e2e test summary
         if: matrix.suite == 'e2e'
-        id: e2e-coverage-summary
+        id: e2e-test-summary
         shell: bash
         run: |
           mkdir -p coverage/e2e
-          if [ ! -d .playwright-coverage ]; then
-            echo "summary=E2E coverage data not found" >> "$GITHUB_OUTPUT"
-            echo "E2E coverage data not found" > coverage/e2e/summary.txt
-            exit 0
-          fi
-          npx playwright show-coverage --reporter=lcov --output=coverage/e2e/lcov.info
-          npx playwright show-coverage --reporter=html --output=coverage/e2e/html
-          coverage_text=$(npx playwright show-coverage --reporter=text)
-          {
-            echo "summary<<'EOF'"
-            echo "$coverage_text"
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
-          printf '%s\n' "$coverage_text" > coverage/e2e/summary.txt
+          echo "E2E tests completed successfully (coverage metrics not collected)" > coverage/e2e/summary.txt
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v5
@@ -188,14 +174,14 @@ jobs:
             e2e_summary=$(cat coverage/e2e/summary.txt)
           fi
           {
-            echo "INTEGRATION_COVERAGE<<'EOF'"
+            echo "INTEGRATION_COVERAGE<<EOF_COVERAGE_DELIMITER"
             echo "$integration_summary"
-            echo "EOF"
+            echo "EOF_COVERAGE_DELIMITER"
           } >> "$GITHUB_ENV"
           {
-            echo "E2E_COVERAGE<<'EOF'"
+            echo "E2E_COVERAGE<<EOF_COVERAGE_DELIMITER"
             echo "$e2e_summary"
-            echo "EOF"
+            echo "EOF_COVERAGE_DELIMITER"
           } >> "$GITHUB_ENV"
 
       - name: Publish pull request status comment
@@ -207,17 +193,19 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const integrationCoverage = process.env.INTEGRATION_COVERAGE || 'Integration coverage summary unavailable.';
-            const e2eCoverage = process.env.E2E_COVERAGE || 'E2E coverage summary unavailable.';
+            const e2eSummary = process.env.E2E_COVERAGE || 'E2E tests completed successfully.';
             const body = [
               '### ✅ Scenario pull request checks passed',
               '',
               '- Lint: success',
-              `- Integration tests: success (${integrationCoverage})`,
-              `- E2E tests: success (${e2eCoverage})`,
+              `- Integration tests: success`,
+              `  - Coverage: ${integrationCoverage}`,
+              `- E2E tests: success`,
+              `  - ${e2eSummary}`,
               '',
-              'Artifacts with coverage details:',
-              '- `integration-coverage`',
-              '- `e2e-coverage`'
+              'Artifacts available:',
+              '- `integration-coverage` - Full integration test coverage report',
+              '- `e2e-coverage` - E2E test execution summary'
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner,
