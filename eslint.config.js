@@ -64,6 +64,22 @@ export default tseslint.config(
   eslintPluginAstro.configs["flat/recommended"],
   eslintPluginPrettier,
   {
+    files: ["*.config.{js,mjs,ts}", "playwright.config.ts", "vitest.config.ts"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+      },
+    },
+  },
+  {
+    files: ["src/pages/api/**/*.ts", "src/lib/services/**/*.ts", "tests/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     rules: {
       "prettier/prettier": [
         "error",
