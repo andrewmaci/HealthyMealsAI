@@ -1,0 +1,8 @@
+name = "healthy-meals-ai"
+compatibility_date = "2025-11-11"
+
+[pages]
+project_name = "healthy-meals-ai"
+pages_build_output_dir = "./dist"
+pages_functions_dir = "./dist/functions"
+

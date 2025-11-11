@@ -1,0 +1,107 @@
+name: Master Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  CLOUDFLARE_PAGES_PROJECT: ${{ secrets.CLOUDFLARE_PAGES_PROJECT }}
+
+concurrency:
+  group: master-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-install
+
+      - name: Run ESLint
+        run: npm run lint
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    environment: HealthyAIEnv
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-install
+
+      - name: Run Vitest integration suite with coverage
+        shell: bash
+        run: npm run test:unit:coverage -- --coverage.reportsDirectory=coverage/integration
+
+      - name: Collect integration coverage summary
+        id: integration-coverage-summary
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const summaryDir = 'coverage/integration';
+          const path = `${summaryDir}/coverage-summary.json`;
+          fs.mkdirSync(summaryDir, { recursive: true });
+          let message = 'Integration coverage summary not found';
+          if (fs.existsSync(path)) {
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const metrics = ['lines', 'statements', 'branches', 'functions'];
+            const format = (metric) => {
+              const data = summary.total[metric] || {};
+              if (!('pct' in data)) {
+                return `${metric}: n/a`;
+              }
+              return `${metric.charAt(0).toUpperCase() + metric.slice(1)} ${data.pct.toFixed(2)}% (${data.covered}/${data.total})`;
+            };
+            message = metrics.map(format).join(', ');
+          }
+          fs.writeFileSync(`${summaryDir}/summary.txt`, message);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `summary=${message.replace(/\\n/g, ' ')}\\n`);
+          NODE
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: integration-coverage
+          path: coverage/integration
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    environment:
+      name: production
+      url: ${{ steps.publish.outputs.deployment-url || steps.publish.outputs.pages-deployment-alias-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node and install dependencies
+        uses: ./.github/actions/setup-node-install
+
+      - name: Build Astro project
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        id: publish
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./dist --project-name=${{ env.CLOUDFLARE_PAGES_PROJECT }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
