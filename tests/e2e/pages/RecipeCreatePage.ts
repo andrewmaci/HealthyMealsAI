@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { BasePage } from "./BasePage";
 
@@ -48,26 +48,50 @@ export class RecipeCreatePage extends BasePage {
   }
 
   async waitForReady() {
+    // Wait for form to be visible
     await this.form.waitFor({ state: "visible" });
+
+    // Wait for React hydration and any initial data loading
+    await this.page.waitForLoadState("networkidle");
+
+    // Ensure key form elements are ready
+    await this.titleInput.waitFor({ state: "visible" });
+    await this.submitButton.waitFor({ state: "visible" });
   }
 
   async fillForm(data: RecipeFormData) {
+    // Wait for inputs to be enabled before filling
+    await this.titleInput.waitFor({ state: "visible" });
     await this.titleInput.fill(data.title);
+
+    await this.servingsInput.waitFor({ state: "visible" });
     await this.servingsInput.fill(data.servings);
 
     for (const [key, value] of Object.entries(data.macros)) {
-      await this.macroInputs[key as keyof RecipeFormData["macros"]].fill(value);
+      const input = this.macroInputs[key as keyof RecipeFormData["macros"]];
+      await input.waitFor({ state: "visible" });
+      await input.fill(value);
     }
 
+    await this.instructionsTextarea.waitFor({ state: "visible" });
     await this.instructionsTextarea.fill(data.instructions);
 
     if (data.explanation !== undefined) {
+      await this.toggleAdvancedButton.waitFor({ state: "visible" });
       await this.toggleAdvancedButton.click();
+
+      // Wait for the explanation textarea to appear (it might be hidden initially)
+      await this.explanationTextarea.waitFor({ state: "visible", timeout: 5000 });
       await this.explanationTextarea.fill(data.explanation);
     }
   }
 
   async submit() {
-    await this.submitButton.click();
+    // Ensure submit button is visible and enabled before clicking
+    await this.submitButton.waitFor({ state: "visible" });
+    await this.submitButton.isEnabled({ timeout: 5000 });
+
+    // Click and wait for navigation to recipe detail page
+    await Promise.all([this.page.waitForURL(/\/recipes\/[\w-]+/, { timeout: 15000 }), this.submitButton.click()]);
   }
 }

@@ -22,17 +22,31 @@ export class SignInPage extends BasePage {
   }
 
   async waitForReady() {
+    // Wait for form to be visible
     await this.form.waitFor({ state: "visible" });
+
+    // Wait for React hydration and network idle
+    await this.page.waitForLoadState("networkidle");
+
+    // Ensure form inputs are ready
+    await this.emailInput.waitFor({ state: "visible" });
+    await this.submitButton.waitFor({ state: "visible" });
   }
 
   async signIn(email: string, password: string) {
-    await this.emailInput.click();
+    // Wait for email input to be ready and fill
+    await this.emailInput.waitFor({ state: "visible" });
     await this.emailInput.fill(email);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await this.passwordInput.click();
+
+    // Wait for password input to be ready and fill
+    await this.passwordInput.waitFor({ state: "visible" });
     await this.passwordInput.fill(password);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await this.submitButton.focus();
-    await this.submitButton.press("Enter");
+
+    // Ensure submit button is enabled before clicking
+    await this.submitButton.waitFor({ state: "visible" });
+    await this.submitButton.isEnabled({ timeout: 5000 });
+
+    // Click and wait for navigation to recipes page
+    await Promise.all([this.page.waitForURL(/\/recipes(?:\/.*)?$/, { timeout: 10000 }), this.submitButton.click()]);
   }
 }
