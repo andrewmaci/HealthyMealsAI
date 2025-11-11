@@ -94,6 +94,11 @@ jobs:
         uses: ./.github/actions/setup-node-install
 
       - name: Build Astro project
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_DEFAULT_MODEL: ${{ secrets.OPENROUTER_DEFAULT_MODEL }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
