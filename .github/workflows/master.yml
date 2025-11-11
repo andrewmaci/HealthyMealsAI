@@ -102,6 +102,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./dist --project-name=${{ env.CLOUDFLARE_PAGES_PROJECT }}
+          command: pages deploy ./dist --project-name=healthy-meals-ai
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
