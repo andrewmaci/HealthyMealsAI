@@ -73,6 +73,7 @@ export default function ProfileSettings() {
         message: "Profile updated successfully.",
       });
       scheduleTransientAlert();
+      refetch();
     },
     onConflict() {
       clearAlertTimeout();

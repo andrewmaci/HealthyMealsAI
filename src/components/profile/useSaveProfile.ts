@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ProfileDTO, ProfileUpdateDto } from "@/types";
 
@@ -15,6 +15,11 @@ const isValidationError = (error: unknown): error is { details?: unknown; error?
 export function useSaveProfile(options: UseSaveProfileOptions): UseSaveProfileResult {
   const [saving, setSaving] = useState(false);
   const lastModifiedRef = useRef(options.lastModified);
+
+  // Update the ref whenever options.lastModified changes
+  useEffect(() => {
+    lastModifiedRef.current = options.lastModified;
+  }, [options.lastModified]);
 
   const safeSetLastModified = useCallback((value: string | null) => {
     lastModifiedRef.current = value;
