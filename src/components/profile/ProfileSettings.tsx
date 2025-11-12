@@ -180,7 +180,7 @@ export default function ProfileSettings() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={refetch} disabled={status === "loading"}>
+          <Button onClick={refetch}>
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
             Retry
           </Button>
@@ -264,7 +264,7 @@ export default function ProfileSettings() {
                   Reload latest
                 </Button>
               )}
-              {alert.kind !== "conflict" && alert.kind !== "none" && (
+              {alert.kind !== "conflict" && (
                 <Button size="sm" variant="ghost" className="px-0 text-xs" onClick={dismissAlert}>
                   Dismiss
                 </Button>
