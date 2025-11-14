@@ -94,7 +94,18 @@ npm run preview
 
 Optional services and configuration:
 - Supabase configuration template exists at `supabase/config.toml`. You can connect this project to a Supabase instance later for Auth/DB.
-- Environment variables for OpenRouter and other services are not yet defined; see `src/env.d.ts` as the place where types for env vars would live when added.
+- Environment variables:
+  - `SUPABASE_URL`: Your Supabase project URL
+  - `SUPABASE_KEY`: Your Supabase anon/public key
+  - `OPENROUTER_API_KEY`: Your OpenRouter API key
+  - `PUBLIC_SITE_URL`: (Production only) Your production URL (e.g., `https://your-app.pages.dev`) - used for email confirmation redirects. If not set, defaults to the request origin.
+
+For production deployment on Cloudflare Pages:
+1. Set `PUBLIC_SITE_URL` in your Cloudflare Pages environment variables to your production domain
+2. Configure Supabase Auth redirect URLs in your Supabase dashboard:
+   - Go to Authentication → URL Configuration
+   - Add your production URL to "Site URL" (e.g., `https://your-app.pages.dev`)
+   - Add `https://your-app.pages.dev/auth/confirm` to "Redirect URLs"
 
 Project structure (conventions):
 

@@ -61,7 +61,7 @@ const mapAuthError = (error: unknown): { status: number; message: string } => {
   };
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, url }) => {
   let payload: unknown;
 
   try {
@@ -88,11 +88,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { email, password, timezone } = parseResult.data;
 
+  // Build the confirmation redirect URL based on the environment
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL || url.origin;
+  const emailRedirectTo = `${siteUrl}/auth/confirm`;
+
   const { data, error } = await locals.supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: undefined,
+      emailRedirectTo,
     },
   });
 
@@ -107,12 +111,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
+  // If no session is returned, email confirmation is required
   if (!data.session) {
-    console.error("Supabase sign-up did not return an active session", {
+    console.log("Email confirmation required for user", {
       userId: data.user.id,
+      email: data.user.email,
     });
 
-    return buildJsonResponse({ error: "Unable to create account. Please sign in manually." }, 500);
+    return buildJsonResponse(
+      {
+        success: true,
+        requiresEmailConfirmation: true,
+        message: "Please check your email to confirm your account.",
+      },
+      201
+    );
   }
 
   try {

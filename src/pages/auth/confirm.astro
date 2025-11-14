@@ -1,0 +1,63 @@
+---
+import { createSupabaseServerInstance } from "../../db/supabase.client";
+
+export const prerender = false;
+
+const supabase = createSupabaseServerInstance({
+  headers: Astro.request.headers,
+  cookies: Astro.cookies,
+});
+
+// Extract token from URL parameters
+const url = new URL(Astro.request.url);
+const token_hash = url.searchParams.get("token_hash");
+const type = url.searchParams.get("type");
+
+// Validate the token and type
+if (!token_hash || !type) {
+  console.error("Email confirmation missing required parameters", { token_hash, type });
+  return Astro.redirect("/auth/signin?error=invalid_confirmation_link");
+}
+
+// Support both signup and email_change confirmation types
+const validTypes = ["signup", "email_change"];
+if (!validTypes.includes(type)) {
+  console.error("Email confirmation invalid type", { type });
+  return Astro.redirect("/auth/signin?error=invalid_confirmation_link");
+}
+
+try {
+  // Verify the token with Supabase
+  const { data, error } = await supabase.auth.verifyOtp({
+    token_hash,
+    type: "email",
+  });
+
+  if (error) {
+    console.error("Email confirmation failed", {
+      error: error.message,
+      status: error.status,
+      name: error.name,
+    });
+    return Astro.redirect("/auth/signin?error=confirmation_failed");
+  }
+
+  if (!data?.user) {
+    console.error("Email confirmation succeeded but no user returned");
+    return Astro.redirect("/auth/signin?error=confirmation_failed");
+  }
+
+  console.log("Email confirmation successful", {
+    userId: data.user.id,
+    email: data.user.email,
+  });
+
+  // Success - redirect to signin with success message
+  return Astro.redirect("/auth/signin?message=email_confirmed");
+} catch (error) {
+  console.error("Unexpected error during email confirmation", {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  return Astro.redirect("/auth/signin?error=confirmation_error");
+}
+---

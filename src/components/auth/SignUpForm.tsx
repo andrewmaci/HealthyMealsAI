@@ -87,6 +87,7 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timezone, setTimezone] = useState<string>(() => getDefaultTimezone());
+  const [confirmationRequired, setConfirmationRequired] = useState(false);
 
   useEffect(() => {
     setTimezone(getDefaultTimezone());
@@ -200,8 +201,9 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
           }),
         });
 
+        const contentType = response.headers.get("content-type") ?? "";
+
         if (!response.ok) {
-          const contentType = response.headers.get("content-type") ?? "";
           let message: string | undefined;
           let nextFieldErrors: FieldErrors = {};
 
@@ -268,6 +270,27 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
           return;
         }
 
+        // Parse successful response
+        if (contentType.includes("application/json")) {
+          try {
+            const data = (await response.json()) as {
+              success?: boolean;
+              requiresEmailConfirmation?: boolean;
+              message?: string;
+            } | null;
+
+            if (data?.requiresEmailConfirmation) {
+              setConfirmationRequired(true);
+              return;
+            }
+          } catch (error) {
+            if (import.meta.env.DEV) {
+              console.debug("Unable to parse sign-up success payload", error);
+            }
+          }
+        }
+
+        // If no email confirmation is required, redirect immediately
         window.location.assign(redirectUrl);
       } catch (error) {
         if (import.meta.env.DEV) {
@@ -298,6 +321,38 @@ export function SignUpForm({ redirectUrl = "/recipes" }: SignUpFormProps) {
     ),
     []
   );
+
+  // Show email confirmation message if registration succeeded
+  if (confirmationRequired) {
+    return (
+      <AuthFormLayout
+        title="Check your email"
+        description="We've sent you a confirmation link to complete your registration."
+        footer={footer}
+      >
+        <div className="space-y-4">
+          <div
+            className="rounded-md border border-primary/60 bg-primary/10 p-4 text-sm text-foreground"
+            role="status"
+          >
+            <p className="font-medium mb-2">Registration successful!</p>
+            <p>
+              Please check your email inbox and click the confirmation link to activate your account. If you don&apos;t
+              see the email, check your spam folder.
+            </p>
+          </div>
+          <div className="text-center text-sm text-muted-foreground">
+            <p>
+              Already confirmed?{" "}
+              <a href="/auth/signin" className="font-medium text-primary hover:underline">
+                Sign in
+              </a>
+            </p>
+          </div>
+        </div>
+      </AuthFormLayout>
+    );
+  }
 
   return (
     <AuthFormLayout

@@ -11,8 +11,45 @@ if (session?.user?.id) {
 }
 
 const redirectUrl = Astro.url.searchParams.get("redirect") ?? "/recipes";
+const error = Astro.url.searchParams.get("error");
+const message = Astro.url.searchParams.get("message");
+
+// Map error codes to user-friendly messages
+const errorMessages: Record<string, string> = {
+  invalid_confirmation_link: "The confirmation link is invalid or has expired.",
+  confirmation_failed: "Email confirmation failed. Please try signing up again.",
+  confirmation_error: "An error occurred during confirmation. Please try again.",
+};
+
+// Map message codes to user-friendly messages
+const successMessages: Record<string, string> = {
+  email_confirmed: "Your email has been confirmed! You can now sign in.",
+};
+
+const displayError = error ? errorMessages[error] || "An error occurred." : undefined;
+const displayMessage = message ? successMessages[message] || undefined : undefined;
 ---
 
 <PublicLayout title="Sign in | HealthyMealsAI">
+  {displayMessage && (
+    <div class="mb-6 mx-auto max-w-md">
+      <div
+        class="rounded-md border border-primary/60 bg-primary/10 p-4 text-sm text-foreground"
+        role="status"
+      >
+        {displayMessage}
+      </div>
+    </div>
+  )}
+  {displayError && (
+    <div class="mb-6 mx-auto max-w-md">
+      <div
+        class="rounded-md border border-destructive/60 bg-destructive/10 p-4 text-sm text-destructive"
+        role="alert"
+      >
+        {displayError}
+      </div>
+    </div>
+  )}
   <SignInForm client:load redirectUrl={redirectUrl} />
 </PublicLayout>
