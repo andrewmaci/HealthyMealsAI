@@ -73,6 +73,7 @@ export default function ProfileSettings() {
         message: "Profile updated successfully.",
       });
       scheduleTransientAlert();
+      refetch();
     },
     onConflict() {
       clearAlertTimeout();
@@ -123,7 +124,8 @@ export default function ProfileSettings() {
     } satisfies ProfileFormValues;
   }, [data]);
 
-  if (status === "loading" || status === "idle") {
+  // Only show loading spinner on initial load (when there's no data yet)
+  if ((status === "loading" || status === "idle") && !data) {
     return (
       <Card className="mx-auto mt-12 w-full max-w-3xl">
         <CardHeader>
@@ -178,7 +180,7 @@ export default function ProfileSettings() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={refetch} disabled={status === "loading"}>
+          <Button onClick={refetch}>
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
             Retry
           </Button>
@@ -200,6 +202,10 @@ export default function ProfileSettings() {
         <CardTitle>Profile Settings</CardTitle>
         <CardDescription>
           Manage allergens, disliked ingredients, and your timezone so we can tailor meals to you.
+          <br />
+          <p className="text-xs text-muted-foreground">
+            Warning, update of values in the input may take few seconds to take effect.
+          </p>
         </CardDescription>
         {lastModified && <p className="text-xs text-muted-foreground">Last updated {formatTimestamp(lastModified)}</p>}
       </CardHeader>
@@ -258,7 +264,7 @@ export default function ProfileSettings() {
                   Reload latest
                 </Button>
               )}
-              {alert.kind !== "conflict" && alert.kind !== "none" && (
+              {alert.kind !== "conflict" && (
                 <Button size="sm" variant="ghost" className="px-0 text-xs" onClick={dismissAlert}>
                   Dismiss
                 </Button>
